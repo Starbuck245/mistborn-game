@@ -22,6 +22,18 @@
     window.addEventListener('resize', resize);
     resize();
 
+    // --- Input System ---
+    const keys = {};
+    const input = {
+      get left() { return keys['ArrowLeft'] || keys['KeyA']; },
+      get right() { return keys['ArrowRight'] || keys['KeyD']; },
+      get jump() { return keys['Space']; },
+      get attack() { return keys['KeyX'] || keys['KeyJ']; },
+      get luck() { return keys['KeyZ'] || keys['KeyK']; },
+    };
+    window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
     let lastTime = 0;
     function gameLoop(timestamp) {
       const dt = (timestamp - lastTime) / 1000;
@@ -39,6 +51,18 @@
       ctx.font = '12px monospace';
       const fps = safeDt > 0 ? Math.round(1 / safeDt) : '--';
       ctx.fillText(`FPS: ${fps}`, 10, 20);
+
+      // Input debug display
+      const inputNames = ['left', 'right', 'jump', 'attack', 'luck'];
+      const inputY = 40;
+      inputNames.forEach((name, i) => {
+        const active = input[name];
+        ctx.fillStyle = active ? '#4ade80' : '#333';
+        ctx.fillRect(10 + i * 60, inputY, 50, 20);
+        ctx.fillStyle = active ? '#000' : '#666';
+        ctx.font = '11px monospace';
+        ctx.fillText(name, 14 + i * 60, inputY + 14);
+      });
 
       requestAnimationFrame(gameLoop);
     }
