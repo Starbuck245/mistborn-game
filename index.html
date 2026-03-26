@@ -1113,6 +1113,143 @@
       hit: [THUG_HIT],
     };
 
+    // --- Garrison Guard Sprite Data (26x40 pixels) ---
+    const GH = '#888888';    // helmet
+    const Gh = '#999999';    // helmet highlight
+    const GA = '#333333';    // dark armor
+    const Ga = '#6a1515';    // armor accent (dark red)
+    const GR = '#8b2020';    // red tabard
+    const Gr = '#6a1515';    // tabard shadow
+    const GS = '#c8a882';    // skin
+    const Gs = '#b08a68';    // skin shadow
+    const GE = '#221111';    // eyes
+    const GB = '#3a3a3a';    // boots
+    const Gb = '#2a2a2a';    // boots dark
+    const GW = '#aaaaaa';    // sword blade
+    const Gw = '#cccccc';    // sword highlight
+
+    // GUARD WALK frame 1 (26 wide x 40 tall)
+    const GUARD_WALK_1 = [
+      // Helmet (rows 0-5)
+      [_,_,_,_,_,_,_,Gh,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,Gh,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,Gh,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,Gh,_,_,_,_,_,_],
+      [_,_,_,_,_,Gh,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,Gh,_,_,_,_,_],
+      [_,_,_,_,_,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,GH,_,_,_,_,_],
+      [_,_,_,_,_,GH,GH,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GH,GH,_,_,_,_,_],
+      [_,_,_,_,_,GH,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GA,GH,_,_,_,_,_],
+      // Face (rows 6-10)
+      [_,_,_,_,_,GH,Gs,GS,GS,GS,GS,GS,GS,GS,GS,GS,GS,GS,GS,Gs,GH,_,_,_,_,_],
+      [_,_,_,_,_,_,Gs,GS,GE,GE,GS,GS,GS,GS,GE,GE,GS,GS,GS,Gs,_,_,_,_,_,_],
+      [_,_,_,_,_,_,Gs,GS,GS,GS,GS,GS,GS,GS,GS,GS,GS,GS,GS,Gs,_,_,_,_,_,_],
+      [_,_,_,_,_,_,Gs,GS,GS,GS,Gs,Gs,Gs,Gs,GS,GS,GS,GS,GS,Gs,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,Gs,GS,GS,GS,GS,GS,GS,GS,Gs,_,_,_,_,_,_,_,_,_],
+      // Shoulders and armor (rows 11-14)
+      [_,_,_,GA,GA,GA,GA,GA,GA,Ga,Ga,Ga,Ga,Ga,Ga,GA,GA,GA,GA,GA,GA,GA,GA,_,_,_],
+      [_,_,GA,GA,GA,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,GA,GA,GA,GA,GW,_,_],
+      [_,_,GA,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,GA,GA,_,GW,_,_],
+      [_,_,_,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,_,_,_,Gw,_,_],
+      // Torso with tabard (rows 15-21)
+      [_,_,_,_,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_],
+      [_,_,_,_,GA,Ga,GR,GR,GR,Gr,Gr,Gr,Gr,GR,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_],
+      [_,_,_,_,GA,Ga,GR,GR,Gr,Gr,Gr,Gr,Gr,Gr,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_],
+      [_,_,_,_,GA,Ga,GR,GR,Gr,Gr,Gr,Gr,Gr,Gr,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_],
+      [_,_,_,_,_,GA,Ga,GR,GR,Gr,Gr,Gr,GR,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,_,_,_,_,_,_,_,_],
+      // Hips (rows 22-23)
+      [_,_,_,_,_,GA,Ga,GA,GA,GA,GA,GA,GA,GA,GA,GA,Ga,GA,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,GA,Ga,GA,GA,GA,GA,_,_,GA,GA,GA,GA,Ga,GA,_,_,_,_,_,_,_],
+      // Legs (rows 24-35) - right forward
+      [_,_,_,_,_,_,GA,GA,GA,GA,_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_],
+      [_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_,_],
+      [_,_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_],
+      [_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,_],
+      [_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,_],
+      [_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_],
+      [_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_],
+      [_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_],
+      [_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_],
+      // Boots (rows 34-39)
+      [_,_,_,Gb,GB,GB,Gb,_,_,_,_,_,_,_,_,_,_,Gb,GB,GB,Gb,_,_,_,_,_],
+      [_,_,_,Gb,GB,GB,Gb,_,_,_,_,_,_,_,_,_,_,Gb,GB,GB,Gb,_,_,_,_,_],
+      [_,_,Gb,GB,GB,GB,GB,_,_,_,_,_,_,_,_,_,_,GB,GB,GB,GB,Gb,_,_,_,_],
+      [_,_,Gb,GB,GB,GB,GB,_,_,_,_,_,_,_,_,_,_,GB,GB,GB,GB,Gb,_,_,_,_],
+      [_,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_],
+      [_,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_],
+    ];
+
+    // GUARD WALK frame 2 (legs together)
+    const GUARD_WALK_2 = GUARD_WALK_1.map((row, r) => {
+      if (r >= 24 && r <= 33) {
+        if (r === 24) return [_,_,_,_,_,_,GA,GA,GA,GA,_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_,_,_];
+        if (r === 25) return [_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_,_];
+        if (r === 26) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 27) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 28) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 29) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 30) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 31) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 32) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+        if (r === 33) return [_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_];
+      }
+      if (r === 34) return [_,_,_,_,_,_,Gb,GB,GB,Gb,_,_,_,Gb,GB,GB,Gb,_,_,_,_,_,_,_,_,_];
+      if (r === 35) return [_,_,_,_,_,_,Gb,GB,GB,Gb,_,_,_,Gb,GB,GB,Gb,_,_,_,_,_,_,_,_,_];
+      if (r === 36) return [_,_,_,_,_,Gb,GB,GB,GB,GB,_,_,_,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_];
+      if (r === 37) return [_,_,_,_,_,Gb,GB,GB,GB,GB,_,_,_,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_];
+      if (r === 38) return [_,_,_,_,_,Gb,GB,GB,GB,GB,Gb,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_];
+      if (r === 39) return [_,_,_,_,_,Gb,GB,GB,GB,GB,Gb,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_];
+      return [...row];
+    });
+
+    // GUARD WALK frame 3 (left foot forward)
+    const GUARD_WALK_3 = GUARD_WALK_1.map((row, r) => {
+      if (r >= 24 && r <= 33) {
+        if (r === 24) return [_,_,_,_,_,_,GA,GA,GA,GA,_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_,_,_];
+        if (r === 25) return [_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_,_];
+        if (r === 26) return [_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_,GA,GA,GA,GA,_,_,_,_,_,_];
+        if (r === 27) return [_,_,_,_,GA,GA,GA,_,_,_,_,_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_,_];
+        if (r === 28) return [_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_];
+        if (r === 29) return [_,_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,GA,_,_,_,_,_];
+        if (r === 30) return [_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_];
+        if (r === 31) return [_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_];
+        if (r === 32) return [_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,_];
+        if (r === 33) return [_,_,_,GA,GA,_,_,_,_,_,_,_,_,_,_,_,_,_,GA,GA,_,_,_,_,_,_];
+      }
+      if (r === 34) return [_,_,Gb,GB,GB,Gb,_,_,_,_,_,_,_,_,_,_,_,Gb,GB,GB,Gb,_,_,_,_,_];
+      if (r === 35) return [_,_,Gb,GB,GB,Gb,_,_,_,_,_,_,_,_,_,_,_,Gb,GB,GB,Gb,_,_,_,_,_];
+      if (r === 36) return [_,_,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_,_,GB,GB,GB,GB,Gb,_,_,_,_,_];
+      if (r === 37) return [_,_,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,_,_,GB,GB,GB,GB,Gb,_,_,_,_,_];
+      if (r === 38) return [_,_,GB,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_,_];
+      if (r === 39) return [_,_,GB,GB,GB,GB,GB,Gb,_,_,_,_,_,_,_,Gb,GB,GB,GB,GB,Gb,_,_,_,_,_];
+      return [...row];
+    });
+
+    // GUARD WALK frame 4 (reuse passing frame)
+    const GUARD_WALK_4 = GUARD_WALK_2;
+
+    // GUARD HIT frame
+    const GUARD_HIT = GUARD_WALK_1.map((row, r) => {
+      if (r === 11) return [_,_,_,_,GA,GA,GA,GA,GA,Ga,Ga,Ga,Ga,Ga,Ga,GA,GA,GA,GA,GA,GA,GA,_,_,_,_];
+      if (r === 12) return [_,_,_,GA,GA,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,GA,GA,GA,_,_,_,_];
+      return [...row];
+    });
+
+    // GUARD ALERT frame (facing player, sword raised)
+    const GUARD_ALERT = GUARD_WALK_1.map((row, r) => {
+      // Sword raised higher
+      if (r === 12) return [_,_,GA,GA,GA,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,GA,GA,GA,Gw,GW,_,_];
+      if (r === 13) return [_,_,GA,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,GA,Gw,GW,_,_,_];
+      if (r === 14) return [_,_,_,GA,GA,Ga,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,GR,Ga,GA,GA,Gw,GW,_,_,_,_];
+      return [...row];
+    });
+
+    const GUARD_SPRITE_FRAMES = {
+      walk: [GUARD_WALK_1, GUARD_WALK_2, GUARD_WALK_3, GUARD_WALK_4],
+      hit: [GUARD_HIT],
+      alert: [GUARD_ALERT],
+    };
+
     // --- Enemy System ---
     const enemies = [];
 
@@ -1131,6 +1268,34 @@
         hitTimer: 0,
         deathTimer: 0,
         onGround: false,
+        anim: { state: 'walk', frame: 0, timer: 0 },
+      };
+    }
+
+    function createGuard(x, y, patrolLeft, patrolRight) {
+      return {
+        type: 'guard',
+        x, y,
+        vx: 0, vy: 0,
+        width: 26, height: 40,
+        hp: 2,
+        maxHp: 2,
+        speed: 80,
+        facing: 1,
+        patrolLeft, patrolRight,
+        alive: true,
+        hitTimer: 0,
+        deathTimer: 0,
+        onGround: false,
+        sootheDuration: 1.5,
+        // Detection
+        detecting: false,
+        // Attack
+        attackTimer: 0,
+        attackCooldown: 1.5,
+        attacking: false,
+        attackDuration: 0.4,
+        swordHitbox: { x: 0, y: 0, width: 30, height: 24 },
         anim: { state: 'walk', frame: 0, timer: 0 },
       };
     }
@@ -1221,16 +1386,79 @@
           continue;
         }
 
-        // Patrol AI
-        e.vx = e.facing * e.speed;
+        // Guard-specific AI: detection and attack
+        if (e.type === 'guard') {
+          const dx = player.x - e.x;
+          const dy = player.y - e.y;
+          const absDx = Math.abs(dx);
+          const absDy = Math.abs(dy);
 
-        // Reverse at patrol bounds
-        if (e.x <= e.patrolLeft) {
-          e.facing = 1;
-          e.x = e.patrolLeft;
-        } else if (e.x + e.width >= e.patrolRight) {
-          e.facing = -1;
-          e.x = e.patrolRight - e.width;
+          // Update attack timer
+          if (e.attacking) {
+            e.attackTimer += dt;
+            if (e.attackTimer >= e.attackDuration) {
+              e.attacking = false;
+              e.attackTimer = e.attackCooldown; // start cooldown
+            }
+          } else if (e.attackTimer > 0) {
+            e.attackTimer -= dt;
+            if (e.attackTimer < 0) e.attackTimer = 0;
+          }
+
+          // Detection: within 150px horizontal and 64px vertical
+          e.detecting = absDx < 150 && absDy < 64 && player.alive !== false;
+
+          if (e.detecting) {
+            // Face the player
+            e.facing = dx > 0 ? 1 : -1;
+
+            if (absDx < 40) {
+              // In attack range: stop and swing sword
+              e.vx = 0;
+              if (!e.attacking && e.attackTimer <= 0) {
+                e.attacking = true;
+                e.attackTimer = 0;
+                // Update sword hitbox position
+                e.swordHitbox.x = e.facing === 1 ? e.x + e.width : e.x - 30;
+                e.swordHitbox.y = e.y + 8;
+              }
+            } else {
+              // Chase the player
+              e.vx = e.facing * e.speed;
+              e.attacking = false;
+            }
+          } else {
+            // Patrol AI (same as thug)
+            e.detecting = false;
+            e.attacking = false;
+            e.vx = e.facing * e.speed;
+
+            if (e.x <= e.patrolLeft) {
+              e.facing = 1;
+              e.x = e.patrolLeft;
+            } else if (e.x + e.width >= e.patrolRight) {
+              e.facing = -1;
+              e.x = e.patrolRight - e.width;
+            }
+          }
+
+          // Update sword hitbox each frame while attacking
+          if (e.attacking) {
+            e.swordHitbox.x = e.facing === 1 ? e.x + e.width : e.x - 30;
+            e.swordHitbox.y = e.y + 8;
+          }
+        } else {
+          // Thug patrol AI
+          e.vx = e.facing * e.speed;
+
+          // Reverse at patrol bounds
+          if (e.x <= e.patrolLeft) {
+            e.facing = 1;
+            e.x = e.patrolLeft;
+          } else if (e.x + e.width >= e.patrolRight) {
+            e.facing = -1;
+            e.x = e.patrolRight - e.width;
+          }
         }
 
         // Don't walk off edges
@@ -1249,10 +1477,18 @@
         resolveEnemyVertical(e);
 
         // Update animation
+        const spriteFrames = e.type === 'guard' ? GUARD_SPRITE_FRAMES : THUG_SPRITE_FRAMES;
+        if (e.type === 'guard' && e.detecting && !e.attacking) {
+          e.anim.state = 'alert';
+        } else if (e.hitTimer > 0) {
+          e.anim.state = 'hit';
+        } else {
+          e.anim.state = 'walk';
+        }
         e.anim.timer += dt;
         if (e.anim.timer >= 0.15) {
           e.anim.timer -= 0.15;
-          e.anim.frame = (e.anim.frame + 1) % THUG_SPRITE_FRAMES.walk.length;
+          e.anim.frame = (e.anim.frame + 1) % spriteFrames[e.anim.state].length;
         }
       }
     }
@@ -1281,6 +1517,23 @@
             if (e.hp <= 0) {
               e.alive = false;
               e.deathTimer = 0;
+            }
+          }
+        }
+
+        // Guard sword attack hits player
+        if (e.type === 'guard' && e.attacking && e.alive && !player.invincible) {
+          const sh = e.swordHitbox;
+          if (rectsOverlap(player.x, player.y, player.width, player.height, sh.x, sh.y, sh.width, sh.height)) {
+            player.hp -= 1;
+            player.invincible = true;
+            player.invincibleTimer = 1.5;
+            player.vx = (player.x > e.x ? 1 : -1) * 250;
+            player.vy = -150;
+
+            if (player.hp <= 0) {
+              player.hp = player.maxHp;
+              respawnPlayer();
             }
           }
         }
@@ -1323,10 +1576,41 @@
           ctx.globalAlpha = (Math.floor(e.hitTimer * 20) % 2 === 0) ? 0.4 : 1;
         }
 
-        const frames = e.hitTimer > 0 ? THUG_SPRITE_FRAMES.hit : THUG_SPRITE_FRAMES.walk;
+        const spriteFrames = e.type === 'guard' ? GUARD_SPRITE_FRAMES : THUG_SPRITE_FRAMES;
+        let animState = 'walk';
+        if (e.hitTimer > 0) animState = 'hit';
+        else if (e.type === 'guard' && e.detecting) animState = 'alert';
+        const frames = spriteFrames[animState] || spriteFrames.walk;
         const spriteData = frames[e.anim.frame % frames.length];
         const flip = e.facing === -1;
         drawSprite(spriteData, screenX, screenY, flip);
+
+        // Guard sword swing visual effect
+        if (e.type === 'guard' && e.attacking && e.alive) {
+          const progress = e.attackTimer / e.attackDuration;
+          const alpha = Math.max(0, 1 - progress * 1.5);
+          const cx = screenX + e.width / 2 + e.facing * (e.width / 2 + 12);
+          const cy = screenY + e.height / 2 - 4;
+          const radius = 16 + progress * 8;
+          const startAngle = e.facing === 1 ? -Math.PI * 0.6 : Math.PI * 0.4;
+          const endAngle = e.facing === 1 ? Math.PI * 0.6 : Math.PI * 1.6;
+
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.8;
+          ctx.strokeStyle = '#cc3333';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, startAngle, endAngle);
+          ctx.stroke();
+
+          ctx.globalAlpha = alpha * 0.4;
+          ctx.strokeStyle = '#ff6644';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 0.6, startAngle, endAngle);
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.restore();
       }
@@ -1341,6 +1625,17 @@
     enemies.push(createThug(37 * 32, 15 * 32 - 36, 34 * 32, 40 * 32));   // on raised section cols 34-40
     enemies.push(createThug(57 * 32, 15 * 32 - 36, 54 * 32, 62 * 32));   // on wide raised area cols 54-62
     enemies.push(createThug(64 * 32, 17 * 32 - 36, 60 * 32, 67 * 32));   // near section end
+
+    // --- Place guards in the Border (cols 70-139) ---
+    // Ground at row 17, y = 17*32 - 40 = 504
+    // Tall building cols 70-75, top at row 8, surface y = 8*32 - 40 = 216
+    // Building cols 80-85, top at row 11, y = 11*32 - 40 = 312
+    // Raised terrain cols 113-120, top at row 13, y = 13*32 - 40 = 376
+    // Tall structure cols 124-130, top at row 7, y = 7*32 - 40 = 184
+    enemies.push(createGuard(72 * 32, 8 * 32 - 40, 70 * 32, 75 * 32));    // on tall building roof
+    enemies.push(createGuard(82 * 32, 11 * 32 - 40, 80 * 32, 85 * 32));   // on medium building roof
+    enemies.push(createGuard(100 * 32, 10 * 32 - 40, 98 * 32, 103 * 32)); // on building cols 98-103
+    enemies.push(createGuard(116 * 32, 13 * 32 - 40, 113 * 32, 120 * 32)); // on raised terrain
 
     function renderPlayer() {
       const screenX = Math.round(player.x - camera.x);
