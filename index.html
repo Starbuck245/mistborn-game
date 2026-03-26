@@ -281,10 +281,40 @@
 
     const level = buildLevel1();
 
-    // Check if a tile is solid (for collision)
+    // Check if a tile type is solid (basic check)
     function isSolid(type) {
       return type === TILE_SOLID || type === TILE_CRUMBLE;
     }
+
+    // --- Crumble State Tracking ---
+    const crumbleState = {}; // key: "r,c" -> { timer: 0, state: 'solid' | 'shaking' | 'collapsed' | 'respawning' }
+
+    // Check if a specific tile at (r,c) is solid, accounting for crumble state
+    function isTileSolid(r, c) {
+      if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) return false;
+      const type = level[r][c];
+      if (type === TILE_CRUMBLE) {
+        const key = r + ',' + c;
+        const cs = crumbleState[key];
+        if (cs && (cs.state === 'collapsed' || cs.state === 'respawning')) return false;
+      }
+      return isSolid(type);
+    }
+
+    // --- Falling Ash Clumps ---
+    const ashClumpSpawns = [
+      { x: 320, interval: 3, timer: 0 },
+      { x: 480, interval: 3.5, timer: 1.2 },
+      { x: 800, interval: 2.5, timer: 0 },
+      { x: 1100, interval: 2.8, timer: 0.8 },
+      { x: 1500, interval: 2.2, timer: 0 },
+      { x: 2400, interval: 2.0, timer: 0.5 },
+      { x: 2900, interval: 2.5, timer: 0 },
+      { x: 3400, interval: 3.0, timer: 1.0 },
+      { x: 3800, interval: 2.3, timer: 0.3 },
+      { x: 4400, interval: 2.7, timer: 0 },
+    ];
+    const ashClumps = [];
 
     // Get tile at pixel position
     function getTile(px, py) {
@@ -501,6 +531,170 @@
       if (!input.luck) {
         player.luckTriggered = false;
       }
+
+      // --- Toxic puddle damage ---
+      if (!player.invincible) {
+        const pLeft = Math.floor(player.x / TILE);
+        const pRight = Math.floor((player.x + player.width - 0.01) / TILE);
+        const pTop = Math.floor(player.y / TILE);
+        const pBottom = Math.floor((player.y + player.height - 0.01) / TILE);
+        let touchedToxic = false;
+        for (let r = pTop; r <= pBottom && !touchedToxic; r++) {
+          for (let c = pLeft; c <= pRight && !touchedToxic; c++) {
+            if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
+            if (level[r][c] === TILE_TOXIC) touchedToxic = true;
+          }
+        }
+        if (touchedToxic) {
+          player.hp -= 1;
+          player.invincible = true;
+          player.invincibleTimer = 1.5;
+          player.vy = -200;
+          player.vx = -100 * player.facing;
+          if (player.hp <= 0) {
+            player.hp = player.maxHp;
+            respawnPlayer();
+          }
+        }
+      }
+
+      // --- Crumbling platform tracking ---
+      // Check if player is standing on a crumble tile (feet just above tile top)
+      {
+        const feetRow = Math.floor((player.y + player.height) / TILE);
+        const pLeft = Math.floor(player.x / TILE);
+        const pRight = Math.floor((player.x + player.width - 0.01) / TILE);
+        for (let c = pLeft; c <= pRight; c++) {
+          if (feetRow < 0 || feetRow >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
+          if (level[feetRow][c] !== TILE_CRUMBLE) continue;
+          const key = feetRow + ',' + c;
+          if (!crumbleState[key]) {
+            crumbleState[key] = { timer: 0, state: 'solid' };
+          }
+          const cs = crumbleState[key];
+          if (cs.state === 'solid' && player.onGround) {
+            cs.timer += dt;
+            if (cs.timer >= 0.3) {
+              cs.state = 'shaking';
+            }
+          }
+        }
+      }
+    }
+
+    // --- Update crumble tiles (called from game loop) ---
+    function updateCrumbleTiles(dt) {
+      for (const key in crumbleState) {
+        const cs = crumbleState[key];
+        if (cs.state === 'shaking') {
+          cs.timer += dt;
+          if (cs.timer >= 1.3) {
+            cs.state = 'collapsed';
+            cs.timer = 0;
+            // Spawn collapse particles
+            const parts = key.split(',');
+            const cr = parseInt(parts[0]);
+            const cc = parseInt(parts[1]);
+            const wx = cc * TILE + TILE / 2;
+            const wy = cr * TILE + TILE / 2;
+            for (let p = 0; p < 6; p++) {
+              effects.push({
+                type: 'crumbleParticle',
+                x: wx + (Math.random() - 0.5) * TILE,
+                y: wy,
+                vx: (Math.random() - 0.5) * 60,
+                vy: Math.random() * 100 + 50,
+                timer: 0,
+                duration: 0.8,
+              });
+            }
+          }
+        } else if (cs.state === 'collapsed') {
+          cs.timer += dt;
+          if (cs.timer >= 5) {
+            cs.state = 'respawning';
+            cs.timer = 0;
+          }
+        } else if (cs.state === 'respawning') {
+          cs.timer += dt;
+          if (cs.timer >= 1.0) {
+            cs.state = 'solid';
+            cs.timer = 0;
+          }
+        }
+      }
+    }
+
+    // --- Update falling ash clumps (called from game loop) ---
+    function updateAshClumps(dt) {
+      // Spawn new clumps
+      for (let i = 0; i < ashClumpSpawns.length; i++) {
+        const sp = ashClumpSpawns[i];
+        sp.timer += dt;
+        if (sp.timer >= sp.interval) {
+          sp.timer -= sp.interval;
+          // Find ground level below spawn point
+          let groundY = LEVEL_PX_H;
+          const col = Math.floor(sp.x / TILE);
+          for (let r = 0; r < LEVEL_H; r++) {
+            if (isTileSolid(r, col)) {
+              groundY = r * TILE;
+              break;
+            }
+          }
+          ashClumps.push({
+            x: sp.x,
+            y: -10,
+            vy: 200,
+            width: 10,
+            height: 10,
+            groundY: groundY,
+            alive: true,
+          });
+        }
+      }
+      // Update existing clumps
+      for (let i = ashClumps.length - 1; i >= 0; i--) {
+        const ac = ashClumps[i];
+        ac.y += ac.vy * dt;
+        // Check collision with solid tiles
+        const cr = Math.floor((ac.y + ac.height) / TILE);
+        const cc = Math.floor((ac.x + ac.width / 2) / TILE);
+        let hitSolid = false;
+        if (cr >= 0 && cr < LEVEL_H && cc >= 0 && cc < LEVEL_W && isTileSolid(cr, cc)) {
+          hitSolid = true;
+        }
+        // Check collision with player
+        let hitPlayer = false;
+        if (ac.alive && !player.invincible) {
+          if (rectsOverlap(ac.x, ac.y, ac.width, ac.height, player.x, player.y, player.width, player.height)) {
+            hitPlayer = true;
+            player.hp -= 1;
+            player.invincible = true;
+            player.invincibleTimer = 1.5;
+            player.vy = -150;
+            if (player.hp <= 0) {
+              player.hp = player.maxHp;
+              respawnPlayer();
+            }
+          }
+        }
+        if (hitSolid || hitPlayer || ac.y > LEVEL_PX_H + 20) {
+          // Shatter into particles
+          for (let p = 0; p < 5; p++) {
+            effects.push({
+              type: 'crumbleParticle',
+              x: ac.x + ac.width / 2 + (Math.random() - 0.5) * 10,
+              y: ac.y + ac.height,
+              vx: (Math.random() - 0.5) * 80,
+              vy: -(Math.random() * 60 + 20),
+              timer: 0,
+              duration: 0.6,
+            });
+          }
+          ashClumps.splice(i, 1);
+        }
+      }
     }
 
     function resolveHorizontal() {
@@ -512,8 +706,7 @@
 
       for (let r = top; r <= bottom; r++) {
         for (let c = left; c <= right; c++) {
-          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
-          if (!isSolid(level[r][c])) continue;
+          if (!isTileSolid(r, c)) continue;
 
           // Tile AABB
           const tx = c * TILE;
@@ -544,8 +737,7 @@
 
       for (let r = top; r <= bottom; r++) {
         for (let c = left; c <= right; c++) {
-          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
-          if (!isSolid(level[r][c])) continue;
+          if (!isTileSolid(r, c)) continue;
 
           const ty = r * TILE;
 
@@ -591,39 +783,64 @@
             ctx.strokeStyle = '#2a2030';
             ctx.strokeRect(screenX, screenY, TILE, TILE);
           } else if (tile === TILE_CRUMBLE) {
+            const ckey = r + ',' + c;
+            const cs = crumbleState[ckey];
+            // Don't render collapsed tiles
+            if (cs && cs.state === 'collapsed') continue;
+            // Respawning: fade in
+            if (cs && cs.state === 'respawning') {
+              ctx.save();
+              ctx.globalAlpha = cs.timer / 1.0;
+            }
+            // Shaking: random offset
+            let shakeX = 0, shakeY = 0;
+            if (cs && cs.state === 'shaking') {
+              shakeX = (Math.random() - 0.5) * 3;
+              shakeY = (Math.random() - 0.5) * 3;
+            }
             ctx.fillStyle = '#4a4050';
-            ctx.fillRect(screenX, screenY, TILE, TILE);
+            ctx.fillRect(screenX + shakeX, screenY + shakeY, TILE, TILE);
             // Cracked look - draw some crack lines
             ctx.strokeStyle = '#5a5060';
             ctx.beginPath();
-            ctx.moveTo(screenX + 4, screenY + 8);
-            ctx.lineTo(screenX + 16, screenY + 16);
-            ctx.lineTo(screenX + 28, screenY + 10);
+            ctx.moveTo(screenX + shakeX + 4, screenY + shakeY + 8);
+            ctx.lineTo(screenX + shakeX + 16, screenY + shakeY + 16);
+            ctx.lineTo(screenX + shakeX + 28, screenY + shakeY + 10);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(screenX + 10, screenY + 22);
-            ctx.lineTo(screenX + 20, screenY + 28);
+            ctx.moveTo(screenX + shakeX + 10, screenY + shakeY + 22);
+            ctx.lineTo(screenX + shakeX + 20, screenY + shakeY + 28);
             ctx.stroke();
             // Top edge
             ctx.fillStyle = '#5a5565';
-            ctx.fillRect(screenX, screenY, TILE, 2);
+            ctx.fillRect(screenX + shakeX, screenY + shakeY, TILE, 2);
+            if (cs && cs.state === 'respawning') {
+              ctx.restore();
+            }
           } else if (tile === TILE_TOXIC) {
+            const t = performance.now() / 1000;
             // Draw ground underneath
             ctx.fillStyle = '#3a3040';
             ctx.fillRect(screenX, screenY, TILE, TILE);
             // Greenish toxic overlay
             ctx.fillStyle = 'rgba(42, 74, 42, 0.7)';
             ctx.fillRect(screenX, screenY, TILE, TILE);
-            // Bubbling effect - small circles
+            // Animated bubbling effect - positions shift with sin/cos
             ctx.fillStyle = '#3a6a3a';
+            const bOff = c * 3.7 + r * 2.3; // unique offset per tile
             ctx.beginPath();
-            ctx.arc(screenX + 8, screenY + 10, 3, 0, Math.PI * 2);
+            ctx.arc(screenX + 8 + Math.sin(t * 2.5 + bOff) * 3, screenY + 10 + Math.cos(t * 1.8 + bOff) * 4, 3 + Math.sin(t * 3 + bOff) * 0.8, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(screenX + 22, screenY + 14, 2, 0, Math.PI * 2);
+            ctx.arc(screenX + 22 + Math.cos(t * 2.0 + bOff + 1) * 3, screenY + 14 + Math.sin(t * 2.2 + bOff + 1) * 3, 2 + Math.cos(t * 2.5 + bOff) * 0.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(screenX + 14, screenY + 22, 2.5, 0, Math.PI * 2);
+            ctx.arc(screenX + 14 + Math.sin(t * 1.7 + bOff + 2) * 4, screenY + 22 + Math.cos(t * 2.8 + bOff + 2) * 3, 2.5 + Math.sin(t * 2 + bOff + 2) * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            // Extra small bubbles
+            ctx.fillStyle = 'rgba(80, 140, 80, 0.6)';
+            ctx.beginPath();
+            ctx.arc(screenX + 18 + Math.cos(t * 3.1 + bOff) * 2, screenY + 6 + Math.sin(t * 2.4 + bOff) * 3, 1.5, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -1372,8 +1589,7 @@
 
       for (let r = top; r <= bottom; r++) {
         for (let c = left; c <= right; c++) {
-          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
-          if (!isSolid(level[r][c])) continue;
+          if (!isTileSolid(r, c)) continue;
           const tx = c * TILE;
           if (enemy.vx > 0) {
             enemy.x = tx - enemy.width;
@@ -1397,8 +1613,7 @@
 
       for (let r = top; r <= bottom; r++) {
         for (let c = left; c <= right; c++) {
-          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
-          if (!isSolid(level[r][c])) continue;
+          if (!isTileSolid(r, c)) continue;
           const ty = r * TILE;
           if (enemy.vy > 0) {
             enemy.y = ty - enemy.height;
@@ -1420,7 +1635,7 @@
       const c = Math.floor(checkX / TILE);
       const r = Math.floor(checkY / TILE);
       if (c < 0 || c >= LEVEL_W || r < 0 || r >= LEVEL_H) return false;
-      return isSolid(level[r][c]);
+      return isTileSolid(r, c);
     }
 
     // --- Visual Effects System ---
@@ -1432,6 +1647,10 @@
         fx.timer += dt;
         if (fx.type === 'luckPulse') {
           fx.radius = (fx.timer / fx.duration) * fx.maxRadius;
+        } else if (fx.type === 'crumbleParticle') {
+          fx.x += fx.vx * dt;
+          fx.y += fx.vy * dt;
+          fx.vy += 300 * dt; // gravity on particles
         }
         if (fx.timer >= fx.duration) {
           effects.splice(i, 1);
@@ -1473,7 +1692,54 @@
           grad.addColorStop(1, `rgba(30,20,60,${alpha})`);
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (fx.type === 'crumbleParticle') {
+          const progress = fx.timer / fx.duration;
+          const alpha = Math.max(0, 1 - progress);
+          const sx = fx.x - camera.x;
+          const sy = fx.y - camera.y;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = '#5a5060';
+          ctx.fillRect(sx - 2, sy - 2, 4, 4);
+          ctx.restore();
         }
+      }
+    }
+
+    // --- Render falling ash clumps ---
+    function renderAshClumps() {
+      for (let i = 0; i < ashClumps.length; i++) {
+        const ac = ashClumps[i];
+        const sx = ac.x - camera.x;
+        const sy = ac.y - camera.y;
+
+        // Warning shadow on ground below
+        const shadowY = ac.groundY - camera.y;
+        const distToGround = ac.groundY - ac.y;
+        if (distToGround > 0 && distToGround < 300) {
+          const shadowAlpha = Math.max(0, 0.4 * (1 - distToGround / 300));
+          const shadowSize = 6 + 8 * (1 - distToGround / 300);
+          ctx.save();
+          ctx.globalAlpha = shadowAlpha;
+          ctx.fillStyle = '#1a1a1a';
+          ctx.beginPath();
+          ctx.ellipse(sx + ac.width / 2, shadowY, shadowSize, shadowSize * 0.3, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // The ash clump itself
+        ctx.save();
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.arc(sx + ac.width / 2, sy + ac.height / 2, ac.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Darker core
+        ctx.fillStyle = '#2a2a2a';
+        ctx.beginPath();
+        ctx.arc(sx + ac.width / 2 - 1, sy + ac.height / 2 - 1, ac.width / 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 
@@ -2209,6 +2475,8 @@
       updatePlayer(safeDt);
       updateEnemies(safeDt);
       updateCombat(safeDt);
+      updateCrumbleTiles(safeDt);
+      updateAshClumps(safeDt);
       updateEffects(safeDt);
       updateAnimation(safeDt);
       updateCamera();
@@ -2218,6 +2486,7 @@
 
       // Render tiles and player
       renderTiles();
+      renderAshClumps();
       renderEnemies();
       renderSoothedIndicators();
       renderEffects();
