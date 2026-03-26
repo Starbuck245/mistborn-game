@@ -50,6 +50,7 @@
       get jump() { return keys['Space']; },
       get attack() { return keys['KeyX'] || keys['KeyJ']; },
       get luck() { return keys['KeyZ'] || keys['KeyK']; },
+      get crouch() { return keys['ArrowDown'] || keys['KeyS']; },
     };
     window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); initAudio(); });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1064,6 +1065,9 @@
       x: SPAWN_X, y: SPAWN_Y,
       vx: 0, vy: 0,
       width: 48, height: 72,
+      standingHeight: 72,
+      crouchHeight: 40,
+      crouching: false,
       onGround: false,
       jumpHeld: false,
       jumpTime: 0,
@@ -1118,6 +1122,8 @@
       player.deadTimer = 0;
       player.attacking = false;
       player.attackTimer = 0;
+      player.crouching = false;
+      player.height = player.standingHeight;
     }
 
     function updatePlayer(dt) {
@@ -1130,10 +1136,34 @@
         return; // no movement while dead
       }
 
+      // --- Crouch ---
+      const wantCrouch = input.crouch && player.onGround;
+      if (wantCrouch && !player.crouching) {
+        // Start crouching: shrink height from top, keep feet in place
+        player.y += (player.standingHeight - player.crouchHeight);
+        player.height = player.crouchHeight;
+        player.crouching = true;
+      } else if (!wantCrouch && player.crouching) {
+        // Try to stand up: check if there's room above
+        const headRoom = player.y - (player.standingHeight - player.crouchHeight);
+        const testCol1 = Math.floor(player.x / TILE);
+        const testCol2 = Math.floor((player.x + player.width - 1) / TILE);
+        const testRow = Math.floor(headRoom / TILE);
+        const blocked = (testRow >= 0 && testRow < LEVEL_H &&
+          ((testCol1 >= 0 && testCol1 < LEVEL_W && isTileSolid(testRow, testCol1)) ||
+           (testCol2 >= 0 && testCol2 < LEVEL_W && isTileSolid(testRow, testCol2))));
+        if (!blocked) {
+          player.y -= (player.standingHeight - player.crouchHeight);
+          player.height = player.standingHeight;
+          player.crouching = false;
+        }
+      }
+
       // --- Horizontal movement with acceleration/deceleration ---
       let targetVx = 0;
-      if (input.left) targetVx -= player.speed;
-      if (input.right) targetVx += player.speed;
+      const moveSpeed = player.crouching ? player.speed * 0.4 : player.speed;
+      if (input.left) targetVx -= moveSpeed;
+      if (input.right) targetVx += moveSpeed;
 
       if (targetVx !== 0) {
         if (player.vx < targetVx) {
@@ -2011,12 +2041,16 @@
     });
 
     // All animation frame sets
+    // Crouch frame: take the bottom portion of idle (legs + lower body)
+    const VIN_CROUCH = VIN_IDLE_1.slice(16); // bottom 20 rows of 36-row sprite
+
     const SPRITE_FRAMES = {
       idle: [VIN_IDLE_1, VIN_IDLE_2],
       run: VIN_RUN,
       jump: [VIN_JUMP],
       fall: [VIN_FALL],
       attack: [VIN_ATTACK_1, VIN_ATTACK_2],
+      crouch: [VIN_CROUCH],
     };
 
     // --- Animation State Machine ---
@@ -2051,7 +2085,9 @@
       }
 
       if (desiredState !== 'attack') {
-        if (!player.onGround && player.vy < 0) {
+        if (player.crouching) {
+          desiredState = 'crouch';
+        } else if (!player.onGround && player.vy < 0) {
           desiredState = 'jump';
         } else if (!player.onGround && player.vy >= 0) {
           desiredState = 'fall';
@@ -3973,6 +4009,7 @@
       const lines = [
         'MOVE:  Arrow Keys / WASD',
         'JUMP:  Space (hold for higher)',
+        'CROUCH:  Down / S',
         'ATTACK:  X',
         'LUCK (Soothe):  Z  --  Freezes nearby enemies',
       ];
