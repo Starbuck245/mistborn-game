@@ -8,10 +8,26 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a12; overflow: hidden; }
     canvas { display: block; }
+    /* --- Mobile Touch Controls --- */
+    #touch-controls { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 160px; z-index: 100; pointer-events: none; }
+    #touch-controls .tb { pointer-events: auto; position: absolute; border-radius: 14px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.55); font-family: monospace; font-weight: bold; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    #touch-controls .tb:active { background: rgba(255,255,255,0.3); }
+    #tb-left { width: 60px; height: 60px; left: 16px; bottom: 24px; font-size: 26px; }
+    #tb-right { width: 60px; height: 60px; left: 86px; bottom: 24px; font-size: 26px; }
+    #tb-jump { width: 70px; height: 70px; right: 16px; bottom: 24px; font-size: 14px; letter-spacing: 1px; }
+    #tb-attack { width: 55px; height: 55px; right: 24px; bottom: 104px; font-size: 13px; }
+    #tb-luck { width: 45px; height: 45px; right: 96px; bottom: 104px; font-size: 12px; }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
+  <div id="touch-controls">
+    <div class="tb" id="tb-left">&#9664;</div>
+    <div class="tb" id="tb-right">&#9654;</div>
+    <div class="tb" id="tb-jump">JUMP</div>
+    <div class="tb" id="tb-attack">ATK</div>
+    <div class="tb" id="tb-luck">LUCK</div>
+  </div>
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -34,6 +50,66 @@
     window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); initAudio(); });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
     window.addEventListener('click', () => { initAudio(); });
+    window.addEventListener('touchstart', () => { initAudio(); }, { once: true });
+
+    // --- Mobile Touch Controls ---
+    if ('ontouchstart' in window) {
+      document.getElementById('touch-controls').style.display = 'block';
+      const touchMap = {
+        'tb-left':   'ArrowLeft',
+        'tb-right':  'ArrowRight',
+        'tb-jump':   'Space',
+        'tb-attack': 'KeyX',
+        'tb-luck':   'KeyZ',
+      };
+      const activeMap = new Map(); // trackingId -> keyCode
+      function handleTouchStart(e) {
+        e.preventDefault();
+        initAudio();
+        for (const t of e.changedTouches) {
+          const el = document.elementFromPoint(t.clientX, t.clientY);
+          if (el && touchMap[el.id]) {
+            activeMap.set(t.identifier, touchMap[el.id]);
+            keys[touchMap[el.id]] = true;
+          }
+        }
+      }
+      function handleTouchEnd(e) {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+          const code = activeMap.get(t.identifier);
+          if (code) {
+            keys[code] = false;
+            activeMap.delete(t.identifier);
+          }
+        }
+      }
+      function handleTouchMove(e) {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+          const el = document.elementFromPoint(t.clientX, t.clientY);
+          const prevCode = activeMap.get(t.identifier);
+          const newCode = (el && touchMap[el.id]) ? touchMap[el.id] : null;
+          if (prevCode !== newCode) {
+            if (prevCode) keys[prevCode] = false;
+            if (newCode) {
+              keys[newCode] = true;
+              activeMap.set(t.identifier, newCode);
+            } else {
+              activeMap.delete(t.identifier);
+            }
+          }
+        }
+      }
+      const tOpts = { passive: false };
+      document.getElementById('touch-controls').addEventListener('touchstart', handleTouchStart, tOpts);
+      document.getElementById('touch-controls').addEventListener('touchend', handleTouchEnd, tOpts);
+      document.getElementById('touch-controls').addEventListener('touchcancel', handleTouchEnd, tOpts);
+      document.getElementById('touch-controls').addEventListener('touchmove', handleTouchMove, tOpts);
+      // Prevent canvas scroll/zoom on touch devices
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); initAudio(); }, tOpts);
+      canvas.addEventListener('touchmove', e => { e.preventDefault(); }, tOpts);
+    }
 
     // --- Audio System ---
     let audioCtx = null;
@@ -425,6 +501,7 @@
     // Listener for "any key" during cutscenes
     let anyKeyFlag = false;
     window.addEventListener('keydown', () => { anyKeyFlag = true; });
+    window.addEventListener('touchstart', () => { anyKeyFlag = true; });
 
     // --- Tile Map ---
     const TILE = 32;
