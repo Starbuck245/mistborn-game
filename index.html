@@ -763,6 +763,7 @@
     let endingCharTimer = 0;
     let endingPauseTimer = 0;
     let endingDisplayedText = '';
+    let endingTextStarted = false;
     let endingVignetteAlpha = 0;
     let endingPulseTimer = 0;
     let endingCameraPanTarget = 0;
@@ -4247,11 +4248,12 @@
       switch (endingPhase) {
         case 0: // Vignette darkens, first text
           endingVignetteAlpha = Math.min(0.6, endingVignetteAlpha + dt * 0.5);
-          if (!endingDisplayedText && endingTimer > 0.5) {
+          if (!endingTextStarted && endingTimer > 0.5) {
+            endingTextStarted = true;
             endingText = endingTexts[0];
             endingCharIndex = 0;
             endingCharTimer = 0;
-            endingDisplayedText = ' '; // mark started
+            endingDisplayedText = '';
           }
           if (endingText) {
             const tw = typewriterUpdate(endingText, endingCharIndex, endingCharTimer, dt, 0.04);
@@ -4455,7 +4457,7 @@
       }
 
       // Text overlay
-      if (endingDisplayedText && endingDisplayedText.trim()) {
+      if (endingDisplayedText && endingDisplayedText.length > 0) {
         ctx.save();
         ctx.fillStyle = '#e8e0d0';
         ctx.font = '16px monospace';
@@ -4585,6 +4587,7 @@
       endingCameraPanTarget = 0;
       endingFadeAlpha = 0;
       endingGuardsCleared = false;
+      endingTextStarted = false;
       // Reset completion state
       completeBlinkTimer = 0;
       completeAnyKeyReady = false;
@@ -4639,6 +4642,7 @@
         endingPulseTimer = 0;
         endingFadeAlpha = 0;
         endingGuardsCleared = false;
+      endingTextStarted = false;
       }
     }
 
