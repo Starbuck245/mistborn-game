@@ -864,111 +864,100 @@
       fillRect(68, 15, 69, 15, 1); // platform to cross
 
       // ========== SECTION 2: THE BORDER (cols 70-139) ==========
-      // Base ground at row 17-19 but with more gaps
+      // Ground path always available at row 17-19
       fillRect(70, 17, 139, 19, 1);
 
-      // Tall building (cols 70-75, rows 8-16)
-      fillRect(70, 8, 75, 16, 1);
+      // --- Area 1: Low wall with ledges (cols 70-76) ---
+      // Short wall — only 3 tiles tall, easy to hop over
+      fillRect(71, 14, 74, 16, 1);
+      // Ledge on left side to hop up
+      fillRect(70, 15, 70, 16, 1);
+      // Ledge on right side to hop down
+      fillRect(75, 15, 76, 16, 1);
+      // Bonus platform above
+      fillRect(72, 11, 73, 11, 1);
 
-      // Staircase up tall building (left side, cols 68-69)
-      fillRect(68, 15, 69, 15, 1);  // step 1
-      fillRect(68, 13, 69, 13, 1);  // step 2
-      fillRect(68, 11, 69, 11, 1);  // step 3
-      fillRect(68, 9, 69, 9, 1);    // step 4 (reach roof row 8)
+      // Gap (cols 77-79) — small, jumpable
+      fillRect(77, 17, 79, 19, 0);
+      fillRect(78, 15, 78, 15, 1);  // stepping stone in middle
 
-      // Gap (cols 76-79)
-      fillRect(76, 17, 79, 19, 0);
+      // --- Area 2: Stepped buildings (cols 80-90) ---
+      // Low building (cols 80-83, rows 14-16)
+      fillRect(80, 14, 83, 16, 1);
+      // Medium height platform (cols 84-86, rows 12-16) — step up from low building
+      fillRect(84, 12, 86, 16, 1);
+      // Step between them
+      fillRect(83, 13, 83, 13, 1);
+      // Taller section (cols 87-89, rows 10-16) — step up again
+      fillRect(87, 10, 89, 16, 1);
+      // Step between
+      fillRect(86, 11, 86, 11, 1);
+      // Top of tall section has bonus platform
+      fillRect(88, 7, 89, 7, 1);
 
-      // Floating platforms to cross gap — added extra stepping stones
-      fillRect(76, 15, 77, 15, 1);  // lower stepping stone
-      fillRect(77, 13, 78, 13, 1);
-      fillRect(79, 14, 79, 14, 1);  // bridge to building
+      // Gap (cols 90-92)
+      fillRect(90, 17, 92, 19, 0);
+      // Stepping stones: descend from tall section or cross at ground
+      fillRect(90, 15, 90, 15, 1);  // high step
+      fillRect(91, 14, 91, 14, 1);  // mid step
+      fillRect(92, 15, 92, 15, 1);  // landing
 
-      // Medium building (cols 80-85, rows 11-16)
-      fillRect(80, 11, 85, 16, 1);
+      // --- Area 3: Tower with clear stairs (cols 93-103) ---
+      // Ground continues (cols 93-97)
+      fillRect(93, 15, 97, 16, 1);
+      // Tower (cols 98-101, rows 8-16) — BUT with ledges on left face
+      fillRect(98, 8, 101, 16, 1);
+      // Clear staircase ledges protruding from left face (2 tiles wide, 2 rows apart)
+      fillRect(96, 15, 97, 15, 1);  // ground approach
+      fillRect(96, 13, 97, 13, 1);  // step 1
+      fillRect(96, 11, 97, 11, 1);  // step 2
+      fillRect(96, 9, 97, 9, 1);    // step 3 — reach roof
+      // Descend on right side
+      fillRect(102, 11, 103, 11, 1); // ledge right
+      fillRect(102, 13, 103, 13, 1); // ledge right lower
+      fillRect(102, 15, 103, 15, 1); // landing right
 
-      // Staircase up medium building (left side, cols 78-79)
-      fillRect(78, 15, 79, 15, 1);  // step 1
-      fillRect(78, 13, 79, 13, 1);  // step 2 (reach roof row 11)
-
-      // High platform (cols 82-84, row 7)
-      fillRect(82, 7, 84, 7, 1);
-      // Step to reach high platform from building roof
-      fillRect(80, 9, 81, 9, 1);
-
-      // Gap (cols 86-89)
-      fillRect(86, 17, 89, 19, 0);
-
-      // Stepping stones going up — added extra platform
-      fillRect(86, 15, 87, 15, 1);  // wider first step
-      fillRect(88, 13, 89, 13, 1);  // wider second step
-
-      // Tall tower (cols 90-93, rows 5-16)
-      fillRect(90, 5, 93, 16, 1);
-
-      // Staircase up tall tower (left side, cols 88-89)
-      fillRect(88, 15, 89, 15, 1);  // step 1
-      fillRect(88, 11, 89, 11, 1);  // step 2
-      fillRect(88, 9, 89, 9, 1);    // step 3
-      fillRect(88, 7, 89, 7, 1);    // step 4 (reach roof row 5)
-
-      // Bridge from tower (cols 94-97, row 8)
-      fillRect(94, 8, 97, 8, 2); // crumbling bridge
-
-      // Building (cols 98-103, rows 10-16)
-      fillRect(98, 10, 103, 16, 1);
-
-      // Staircase up building (left side, cols 96-97)
-      fillRect(96, 15, 97, 15, 1);  // step 1
-      fillRect(96, 13, 97, 13, 1);  // step 2 (reach roof row 10)
-
-      // Toxic area (cols 98-100 on ground level - already solid, put toxic on surface)
+      // Toxic area on ground
       fillRect(104, 16, 106, 16, 3);
 
-      // Big gap (cols 107-112)
-      fillRect(107, 17, 112, 19, 0);
+      // Gap (cols 107-109) — moderate
+      fillRect(107, 17, 109, 19, 0);
+      fillRect(108, 15, 108, 15, 1);  // stepping stone
 
-      // Platforms across big gap — added middle stepping stone
-      fillRect(107, 15, 108, 15, 1);  // first step down from building
-      fillRect(109, 14, 110, 14, 1);  // middle platform
-      fillRect(111, 12, 112, 12, 1);  // changed from crumbling to solid
+      // --- Area 4: Rooftop run (cols 110-125) ---
+      // Raised terrain (cols 110-115, rows 14-16)
+      fillRect(110, 14, 115, 16, 1);
+      // Higher platform (cols 113-117, row 12)
+      fillRect(113, 12, 117, 12, 1);
+      // Even higher bonus (cols 115-116, row 9)
+      fillRect(115, 9, 116, 9, 1);
 
-      // Raised terrain (cols 113-120, rows 13-16)
-      fillRect(113, 13, 120, 16, 1);
+      // Gap (cols 118-119)
+      fillRect(118, 17, 119, 19, 0);
+      fillRect(118, 14, 118, 14, 1);  // step across
+      fillRect(119, 13, 119, 13, 1);  // step across high
 
-      // Upper platforms (cols 115-117, row 9)
-      fillRect(115, 9, 117, 9, 1);
+      // Raised area (cols 120-125, rows 13-16)
+      fillRect(120, 13, 125, 16, 1);
+      // Upper ledge
+      fillRect(122, 10, 124, 10, 1);
 
-      // Gap (cols 121-123)
-      fillRect(121, 17, 123, 19, 0);
-      fillRect(121, 13, 123, 16, 0);
+      // --- Area 5: Final border approach (cols 126-139) ---
+      // Gap (cols 126-127)
+      fillRect(126, 17, 127, 19, 0);
+      fillRect(126, 15, 127, 15, 1);  // bridge
 
-      // Floating platforms — stepping stones across gap
-      fillRect(121, 15, 122, 15, 1);  // lower step (wider)
-      fillRect(122, 13, 123, 13, 1);  // mid platform
+      // Medium building (cols 128-132, rows 11-16) with stairs
+      fillRect(128, 11, 132, 16, 1);
+      fillRect(126, 13, 127, 13, 1);  // step up left
+      fillRect(133, 13, 134, 13, 1);  // step down right
+      fillRect(133, 15, 134, 15, 1);  // lower step right
 
-      // Tall structure (cols 124-130, rows 7-16)
-      fillRect(124, 7, 130, 16, 1);
-
-      // Staircase up tall structure (left side, cols 122-123)
-      fillRect(122, 15, 123, 15, 1);  // step 1
-      fillRect(122, 13, 123, 13, 1);  // step 2
-      fillRect(122, 11, 123, 11, 1);  // step 3
-      fillRect(122, 9, 123, 9, 1);    // step 4 (reach roof row 7)
-
-      // Platforms on top of structure
-      fillRect(126, 4, 128, 4, 1);
-
-      // Gap (cols 131-133)
-      fillRect(131, 17, 133, 19, 0);
-      fillRect(131, 15, 132, 15, 1);  // stepping stone (lowered and solidified)
-      fillRect(133, 14, 133, 14, 1);  // bridge to transition area
-
-      // Transition area (cols 134-139, rows 14-16)
-      fillRect(134, 14, 139, 16, 1);
+      // Ground path continues
+      fillRect(135, 15, 139, 16, 1);
 
       // Toxic puddles near border
-      fillRect(136, 13, 138, 13, 3);
+      fillRect(137, 14, 138, 14, 3);
 
       // ========== SECTION 3: THE DEAD END (cols 140-199) ==========
       // Base ground
@@ -1116,12 +1105,12 @@
       jumpHeld: false,
       jumpTime: 0,
       facing: 1,
-      speed: 200,
-      accel: 800,
-      decel: 600,
-      jumpForce: -400,
-      gravity: 980,
-      maxJumpTime: 0.2,
+      speed: 300,
+      accel: 1200,
+      decel: 900,
+      jumpForce: -600,
+      gravity: 1470,
+      maxJumpTime: 0.22,
       // Attack state
       attacking: false,
       attackTimer: 0,
@@ -2417,7 +2406,7 @@
         width: 48, height: 72,
         hp: 1,
         maxHp: 1,
-        speed: 60,
+        speed: 90,
         facing: 1,
         patrolLeft, patrolRight,
         alive: true,
@@ -2439,7 +2428,7 @@
         width: 52, height: 80,
         hp: 2,
         maxHp: 2,
-        speed: 80,
+        speed: 120,
         facing: 1,
         patrolLeft, patrolRight,
         alive: true,
@@ -2862,7 +2851,7 @@
             e.sootheTimer = 0;
           }
           // Still apply gravity while soothed
-          e.vy += 980 * dt;
+          e.vy += 1470 * dt;
           e.y += e.vy * dt;
           resolveEnemyVertical(e);
           continue;
@@ -2872,7 +2861,7 @@
         if (e.hitTimer > 0) {
           e.hitTimer -= dt;
           // Still apply gravity during hit stun
-          e.vy += 980 * dt;
+          e.vy += 1470 * dt;
           e.y += e.vy * dt;
           resolveEnemyVertical(e);
           // Apply knockback decel
@@ -2968,7 +2957,7 @@
         }
 
         // Apply gravity
-        e.vy += 980 * dt;
+        e.vy += 1470 * dt;
 
         // Move
         e.x += e.vx * dt;
@@ -3134,10 +3123,10 @@
       enemies.push(createThug(64 * TILE, 17 * TILE - 72, 60 * TILE, 67 * TILE));   // near section end
 
       // --- Place guards in the Border (cols 70-139) ---
-      enemies.push(createGuard(72 * TILE, 8 * TILE - 80, 70 * TILE, 75 * TILE));    // on tall building roof
-      enemies.push(createGuard(82 * TILE, 11 * TILE - 80, 80 * TILE, 85 * TILE));   // on medium building roof
-      enemies.push(createGuard(100 * TILE, 10 * TILE - 80, 98 * TILE, 103 * TILE)); // on building cols 98-103
-      enemies.push(createGuard(116 * TILE, 13 * TILE - 80, 113 * TILE, 120 * TILE)); // on raised terrain
+      enemies.push(createGuard(82 * TILE, 12 * TILE - 80, 80 * TILE, 86 * TILE));    // on stepped building mid
+      enemies.push(createGuard(94 * TILE, 15 * TILE - 80, 93 * TILE, 97 * TILE));   // ground patrol before tower
+      enemies.push(createGuard(99 * TILE, 8 * TILE - 80, 98 * TILE, 101 * TILE));   // on tower roof
+      enemies.push(createGuard(121 * TILE, 13 * TILE - 80, 120 * TILE, 125 * TILE)); // on raised area
 
       // --- Dead End Guards (cols 165-195) ---
       const dg1 = createGuard(168 * TILE, 14 * TILE - 80, 165 * TILE, 175 * TILE);
