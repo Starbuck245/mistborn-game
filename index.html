@@ -377,21 +377,45 @@
       luckRadius: 120,
       luckActive: false,
       luckTriggered: false,
+      // Pickups & death
+      boxings: 0,
+      dead: false,
+      deadTimer: 0,
+      checkpoint: 0,
+      vialDrainAnim: 0, // animates vial draining when hit
     };
 
+    // Checkpoints: start of Slums, start of Border, start of Dead End
+    const CHECKPOINTS = [64, 70 * TILE, 140 * TILE];
+
     function respawnPlayer() {
-      player.x = SPAWN_X;
-      player.y = SPAWN_Y;
+      const cpX = CHECKPOINTS[player.checkpoint] || SPAWN_X;
+      player.x = cpX;
+      player.y = 14 * TILE;
       player.vx = 0;
       player.vy = 0;
       player.onGround = false;
       player.jumpHeld = false;
       player.jumpTime = 0;
+      player.hp = player.maxHp;
       player.invincible = true;
-      player.invincibleTimer = 1.5;
+      player.invincibleTimer = 2.0;
+      player.dead = false;
+      player.deadTimer = 0;
+      player.attacking = false;
+      player.attackTimer = 0;
     }
 
     function updatePlayer(dt) {
+      // --- Death state ---
+      if (player.dead) {
+        player.deadTimer += dt;
+        if (player.deadTimer >= 2.0) {
+          respawnPlayer();
+        }
+        return; // no movement while dead
+      }
+
       // --- Horizontal movement with acceleration/deceleration ---
       let targetVx = 0;
       if (input.left) targetVx -= player.speed;
@@ -551,9 +575,10 @@
           player.invincibleTimer = 1.5;
           player.vy = -200;
           player.vx = -100 * player.facing;
+          player.vialDrainAnim = 1;
           if (player.hp <= 0) {
-            player.hp = player.maxHp;
-            respawnPlayer();
+            player.dead = true;
+            player.deadTimer = 0;
           }
         }
       }
@@ -1651,6 +1676,10 @@
           fx.x += fx.vx * dt;
           fx.y += fx.vy * dt;
           fx.vy += 300 * dt; // gravity on particles
+        } else if (fx.type === 'sparkle') {
+          fx.x += fx.vx * dt;
+          fx.y += fx.vy * dt;
+          fx.vy += 100 * dt;
         }
         if (fx.timer >= fx.duration) {
           effects.splice(i, 1);
@@ -1702,6 +1731,176 @@
           ctx.fillStyle = '#5a5060';
           ctx.fillRect(sx - 2, sy - 2, 4, 4);
           ctx.restore();
+        } else if (fx.type === 'sparkle') {
+          const progress = fx.timer / fx.duration;
+          const alpha = Math.max(0, 1 - progress);
+          const sx = fx.x - camera.x;
+          const sy = fx.y - camera.y;
+          const size = 3 * (1 - progress);
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = fx.color || '#fff';
+          // Draw a small star/diamond
+          ctx.beginPath();
+          ctx.moveTo(sx, sy - size);
+          ctx.lineTo(sx + size * 0.5, sy);
+          ctx.lineTo(sx, sy + size);
+          ctx.lineTo(sx - size * 0.5, sy);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+
+    // --- Pickups System ---
+    const pickups = [];
+    function createPickup(x, y, type) {
+      return { x, y, width: type === 'vial' ? 12 : 10, height: type === 'vial' ? 16 : 10, type, collected: false, bobTimer: Math.random() * Math.PI * 2 };
+    }
+
+    // Place vial pickups (health restore) - 5 throughout the level, before hard sections
+    pickups.push(createPickup(25 * TILE, 14 * TILE, 'vial'));   // Slums, before toxic puddle
+    pickups.push(createPickup(50 * TILE, 13 * TILE, 'vial'));   // Mid-slums
+    pickups.push(createPickup(80 * TILE, 13 * TILE, 'vial'));   // Early border
+    pickups.push(createPickup(120 * TILE, 13 * TILE, 'vial'));  // Mid border
+    pickups.push(createPickup(155 * TILE, 13 * TILE, 'vial'));  // Dead end area
+
+    // Place boxing (coin) pickups - 25 spread throughout
+    // Slums section (cols 0-69)
+    pickups.push(createPickup(3 * TILE, 15 * TILE, 'boxing'));
+    pickups.push(createPickup(7 * TILE, 13 * TILE, 'boxing'));
+    pickups.push(createPickup(14 * TILE, 12 * TILE, 'boxing'));
+    pickups.push(createPickup(20 * TILE, 11 * TILE, 'boxing'));
+    pickups.push(createPickup(22 * TILE, 11 * TILE, 'boxing'));
+    pickups.push(createPickup(31 * TILE, 11 * TILE, 'boxing'));
+    pickups.push(createPickup(35 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(40 * TILE, 15 * TILE, 'boxing'));
+    pickups.push(createPickup(45 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(55 * TILE, 15 * TILE, 'boxing'));
+    pickups.push(createPickup(60 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(65 * TILE, 15 * TILE, 'boxing'));
+    // Border section (cols 70-139)
+    pickups.push(createPickup(75 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(82 * TILE, 12 * TILE, 'boxing'));
+    pickups.push(createPickup(88 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(95 * TILE, 13 * TILE, 'boxing'));
+    pickups.push(createPickup(100 * TILE, 15 * TILE, 'boxing'));
+    pickups.push(createPickup(108 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(115 * TILE, 13 * TILE, 'boxing'));
+    pickups.push(createPickup(125 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(130 * TILE, 12 * TILE, 'boxing'));
+    // Dead End section (cols 140-199)
+    pickups.push(createPickup(145 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(152 * TILE, 13 * TILE, 'boxing'));
+    pickups.push(createPickup(160 * TILE, 14 * TILE, 'boxing'));
+    pickups.push(createPickup(170 * TILE, 15 * TILE, 'boxing'));
+    pickups.push(createPickup(180 * TILE, 14 * TILE, 'boxing'));
+
+    function updatePickups(dt) {
+      // Update checkpoint based on player position
+      if (player.x >= 140 * TILE) player.checkpoint = 2;
+      else if (player.x >= 70 * TILE) player.checkpoint = 1;
+
+      for (let i = 0; i < pickups.length; i++) {
+        const p = pickups[i];
+        if (p.collected) continue;
+        p.bobTimer += dt * 3;
+
+        // Check collision with player
+        const bobY = p.y + Math.sin(p.bobTimer) * 3;
+        if (rectsOverlap(player.x, player.y, player.width, player.height, p.x, bobY, p.width, p.height)) {
+          if (p.type === 'vial' && player.hp < player.maxHp) {
+            p.collected = true;
+            player.hp += 1;
+            // Sparkle effect
+            for (let s = 0; s < 8; s++) {
+              effects.push({
+                type: 'sparkle', x: p.x + p.width / 2, y: bobY + p.height / 2,
+                vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120,
+                timer: 0, duration: 0.5, color: '#aaccee'
+              });
+            }
+          } else if (p.type === 'boxing') {
+            p.collected = true;
+            player.boxings += 1;
+            for (let s = 0; s < 6; s++) {
+              effects.push({
+                type: 'sparkle', x: p.x + p.width / 2, y: bobY + p.height / 2,
+                vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100,
+                timer: 0, duration: 0.4, color: '#daa520'
+              });
+            }
+          }
+        }
+      }
+
+      // Drain animation decay
+      if (player.vialDrainAnim > 0) {
+        player.vialDrainAnim -= dt * 2;
+        if (player.vialDrainAnim < 0) player.vialDrainAnim = 0;
+      }
+    }
+
+    function renderPickups() {
+      for (let i = 0; i < pickups.length; i++) {
+        const p = pickups[i];
+        if (p.collected) continue;
+        const bobY = p.y + Math.sin(p.bobTimer) * 3;
+        const sx = p.x - camera.x;
+        const sy = bobY - camera.y;
+
+        // Skip if off-screen
+        if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue;
+
+        if (p.type === 'vial') {
+          // Glow behind vial
+          ctx.save();
+          ctx.globalAlpha = 0.25 + Math.sin(p.bobTimer * 1.5) * 0.1;
+          const glow = ctx.createRadialGradient(sx + 6, sy + 8, 0, sx + 6, sy + 8, 16);
+          glow.addColorStop(0, 'rgba(170,204,238,0.6)');
+          glow.addColorStop(1, 'rgba(170,204,238,0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(sx - 10, sy - 8, 32, 32);
+          ctx.restore();
+
+          // Vial body
+          ctx.fillStyle = '#aaccee';
+          ctx.fillRect(sx + 2, sy + 4, 8, 12);
+          // Vial neck
+          ctx.fillRect(sx + 3, sy, 6, 5);
+          // Vial cap
+          ctx.fillStyle = '#889';
+          ctx.fillRect(sx + 4, sy - 1, 4, 2);
+          // Highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(sx + 3, sy + 5, 2, 8);
+        } else if (p.type === 'boxing') {
+          // Glow
+          ctx.save();
+          ctx.globalAlpha = 0.2 + Math.sin(p.bobTimer * 2) * 0.1;
+          const glow = ctx.createRadialGradient(sx + 5, sy + 5, 0, sx + 5, sy + 5, 12);
+          glow.addColorStop(0, 'rgba(218,165,32,0.5)');
+          glow.addColorStop(1, 'rgba(218,165,32,0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(sx - 7, sy - 7, 24, 24);
+          ctx.restore();
+
+          // Gold coin
+          ctx.fillStyle = '#daa520';
+          ctx.beginPath();
+          ctx.arc(sx + 5, sy + 5, 5, 0, Math.PI * 2);
+          ctx.fill();
+          // Inner circle
+          ctx.fillStyle = '#c89418';
+          ctx.beginPath();
+          ctx.arc(sx + 5, sy + 5, 3, 0, Math.PI * 2);
+          ctx.fill();
+          // Highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.beginPath();
+          ctx.arc(sx + 4, sy + 4, 2, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
     }
@@ -2465,6 +2664,102 @@
     camera.x = Math.max(0, player.x - canvas.width / 3);
     camera.y = Math.max(0, player.y - canvas.height / 2);
 
+    // --- HUD Rendering ---
+    function renderHUD() {
+      // Top-left: Health vials
+      const vialX = 15;
+      const vialY = 15;
+      for (let i = 0; i < player.maxHp; i++) {
+        const x = vialX + i * 25;
+        const y = vialY;
+        const full = i < player.hp;
+        const draining = (i === player.hp && player.vialDrainAnim > 0);
+
+        if (full) {
+          // Full vial - bright silver-blue
+          ctx.fillStyle = '#aaccee';
+          ctx.fillRect(x + 2, y + 4, 8, 12);
+          ctx.fillRect(x + 3, y, 6, 5);
+          ctx.fillStyle = '#889';
+          ctx.fillRect(x + 4, y - 1, 4, 2);
+          // Highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.fillRect(x + 3, y + 5, 2, 8);
+        } else if (draining) {
+          // Draining animation
+          const drainPct = player.vialDrainAnim;
+          // Empty outline
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 2, y + 4, 8, 12);
+          ctx.strokeRect(x + 3, y, 6, 5);
+          // Partial fill from bottom
+          const fillH = Math.floor(12 * drainPct);
+          ctx.fillStyle = '#aaccee';
+          ctx.globalAlpha = 0.7;
+          ctx.fillRect(x + 2, y + 4 + (12 - fillH), 8, fillH);
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#889';
+          ctx.fillRect(x + 4, y - 1, 4, 2);
+        } else {
+          // Empty vial - dark outline
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 2, y + 4, 8, 12);
+          ctx.strokeRect(x + 3, y, 6, 5);
+          ctx.fillStyle = '#333';
+          ctx.fillRect(x + 4, y - 1, 4, 2);
+        }
+      }
+
+      // Top-right: Boxing (coin) count
+      const coinX = canvas.width - 80;
+      const coinY = 22;
+      // Gold coin icon
+      ctx.fillStyle = '#daa520';
+      ctx.beginPath();
+      ctx.arc(coinX, coinY, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#c89418';
+      ctx.beginPath();
+      ctx.arc(coinX, coinY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.arc(coinX - 1, coinY - 1, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Count text
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px monospace';
+      ctx.fillText(` ${player.boxings}`, coinX + 10, coinY + 5);
+
+      // Bottom-center: Luck cooldown bar
+      const barW = 200;
+      const barH = 6;
+      const barX = (canvas.width - barW) / 2;
+      const barY = canvas.height - 30;
+      // Label
+      ctx.fillStyle = '#9988bb';
+      ctx.font = '10px monospace';
+      ctx.fillText('LUCK', barX + barW / 2 - 14, barY - 4);
+      // Background
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      // Fill
+      if (player.luckCooldown <= 0) {
+        ctx.fillStyle = '#6644aa';
+        ctx.fillRect(barX, barY, barW, barH);
+      } else {
+        const pct = 1 - (player.luckCooldown / player.luckMaxCooldown);
+        ctx.fillStyle = '#6644aa';
+        ctx.fillRect(barX, barY, barW * pct, barH);
+      }
+      // Border
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+    }
+
     let lastTime = 0;
     function gameLoop(timestamp) {
       const dt = (timestamp - lastTime) / 1000;
@@ -2473,6 +2768,7 @@
 
       // Update
       updatePlayer(safeDt);
+      updatePickups(safeDt);
       updateEnemies(safeDt);
       updateCombat(safeDt);
       updateCrumbleTiles(safeDt);
@@ -2487,6 +2783,7 @@
       // Render tiles and player
       renderTiles();
       renderAshClumps();
+      renderPickups();
       renderEnemies();
       renderSoothedIndicators();
       renderEffects();
@@ -2496,52 +2793,28 @@
       updateParticles(safeDt);
       renderParticles();
 
-      // HUD (not affected by camera)
-      ctx.fillStyle = '#666';
-      ctx.font = '12px monospace';
-      const fps = safeDt > 0 ? Math.round(1 / safeDt) : '--';
-      ctx.fillText(`FPS: ${fps}`, 10, 20);
-
-      // Input debug display
-      const inputNames = ['left', 'right', 'jump', 'attack', 'luck'];
-      const inputY = 40;
-      inputNames.forEach((name, i) => {
-        const active = input[name];
-        ctx.fillStyle = active ? '#4ade80' : '#333';
-        ctx.fillRect(10 + i * 60, inputY, 50, 20);
-        ctx.fillStyle = active ? '#000' : '#666';
-        ctx.font = '11px monospace';
-        ctx.fillText(name, 14 + i * 60, inputY + 14);
-      });
-
-      // Luck cooldown bar (bottom center)
-      const barW = 200;
-      const barH = 6;
-      const barX = (canvas.width - barW) / 2;
-      const barY = canvas.height - 30;
-      // Label
-      ctx.fillStyle = '#9988bb';
-      ctx.font = '10px monospace';
-      ctx.fillText('LUCK', barX + barW / 2 - 14, barY - 4);
-      // Background
-      ctx.fillStyle = '#333';
-      ctx.fillRect(barX, barY, barW, barH);
-      // Fill
-      if (player.luckCooldown <= 0) {
-        // Ready - full blue-purple
-        ctx.fillStyle = '#6644aa';
-        ctx.fillRect(barX, barY, barW, barH);
-      } else {
-        // Recharging - fill left to right
-        const pct = 1 - (player.luckCooldown / player.luckMaxCooldown);
-        ctx.fillStyle = '#6644aa';
-        ctx.fillRect(barX, barY, barW * pct, barH);
+      // Death overlay
+      if (player.dead) {
+        const deathAlpha = Math.min(player.deadTimer / 0.5, 0.7);
+        ctx.save();
+        ctx.globalAlpha = deathAlpha;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        if (player.deadTimer > 0.5) {
+          ctx.save();
+          ctx.globalAlpha = Math.min((player.deadTimer - 0.5) / 0.3, 1);
+          ctx.fillStyle = '#8866aa';
+          ctx.font = '24px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('The mists claim another...', canvas.width / 2, canvas.height / 2);
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
       }
-      // Border
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(barX, barY, barW, barH);
 
+      // HUD (not affected by camera)
+      renderHUD();
 
       requestAnimationFrame(gameLoop);
     }
