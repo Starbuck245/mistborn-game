@@ -527,13 +527,438 @@
       }
     }
 
-    function renderPlayer() {
-      const screenX = player.x - camera.x;
-      const screenY = player.y - camera.y;
+    // --- Vin Sprite Data (24 wide x 36 tall) ---
+    // Color palette constants
+    const _ = null;           // transparent
+    const H = '#1a0e05';     // hair (very dark brown/black)
+    const h = '#2a1a0a';     // hair highlight
+    const S = '#c8a882';     // skin
+    const s = '#b08a68';     // skin shadow
+    const E = '#e8e8ff';     // eyes (bright, stands out)
+    const e = '#6688cc';     // eye iris
+    const M = '#8a6050';     // mouth/nose hint
+    const C = '#4a6d8c';     // cloak main
+    const c = '#5a80a0';     // cloak edge/highlight
+    const D = '#1a1a2a';     // dark clothing under cloak
+    const d = '#252538';     // dark clothing lighter
+    const B = '#3a3a4a';     // boots
+    const b = '#2a2a3a';     // boots dark
+    const K = '#8090a0';     // knife blade
+    const k = '#5a4030';     // knife handle
 
-      // Draw player as colored rectangle (Vin's cloak color)
-      ctx.fillStyle = '#4a6d8c';
-      ctx.fillRect(screenX, screenY, player.width, player.height);
+    // IDLE frame 1
+    const VIN_IDLE_1 = [
+      // row 0-2: top of hair
+      [_,_,_,_,_,_,_,_,H,H,H,H,H,H,H,H,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,H,H,h,H,H,H,H,h,H,H,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,H,H,h,H,H,H,H,H,H,h,H,H,_,_,_,_,_,_],
+      // row 3-4: hair + face top
+      [_,_,_,_,_,H,H,H,H,H,H,H,H,H,H,H,H,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,H,s,S,S,S,S,S,S,s,H,H,H,_,_,_,_,_],
+      // row 5: eyes
+      [_,_,_,_,_,H,H,s,S,E,e,S,S,E,e,S,s,H,H,_,_,_,_,_],
+      // row 6: nose
+      [_,_,_,_,_,H,H,s,S,S,S,S,M,S,S,S,s,H,H,_,_,_,_,_],
+      // row 7: mouth
+      [_,_,_,_,_,H,H,s,S,S,M,M,M,S,S,S,s,H,H,_,_,_,_,_],
+      // row 8: chin + hair sides
+      [_,_,_,_,H,H,H,s,S,S,S,s,s,S,S,S,s,H,H,H,_,_,_,_],
+      // row 9: neck + hair flowing down
+      [_,_,_,_,H,H,_,_,s,S,S,S,S,S,S,s,_,_,H,H,_,_,_,_],
+      // row 10-11: shoulders + cloak top
+      [_,_,_,H,H,c,C,C,C,D,D,D,D,D,D,C,C,C,c,H,H,_,_,_],
+      [_,_,H,H,c,C,C,C,D,D,D,D,D,D,D,D,C,C,C,c,H,H,_,_],
+      // row 12-14: upper body (cloak wrapping around)
+      [_,_,H,c,C,C,C,D,D,D,D,D,D,D,D,D,D,C,C,C,c,H,_,_],
+      [_,_,H,c,C,C,D,D,D,d,D,D,D,D,d,D,D,D,C,C,c,H,_,_],
+      [_,_,_,c,C,C,D,D,d,d,D,D,D,D,d,d,D,D,C,C,c,_,_,_],
+      // row 15-17: torso
+      [_,_,_,c,C,C,D,D,d,D,D,D,D,D,D,d,D,D,C,C,c,_,_,_],
+      [_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_],
+      [_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_],
+      // row 18-19: waist
+      [_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_],
+      [_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_],
+      // row 20-21: hips + cloak flare
+      [_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_],
+      [_,_,_,c,C,C,C,D,D,D,D,_,_,D,D,D,D,C,C,C,c,_,_,_],
+      // row 22-25: legs
+      [_,_,_,c,C,C,D,D,D,D,_,_,_,_,D,D,D,D,C,C,c,_,_,_],
+      [_,_,_,c,C,C,D,D,D,_,_,_,_,_,_,D,D,D,C,C,c,_,_,_],
+      [_,_,_,_,c,C,D,D,D,_,_,_,_,_,_,D,D,D,C,c,_,_,_,_],
+      [_,_,_,_,c,C,D,D,D,_,_,_,_,_,_,D,D,D,C,c,_,_,_,_],
+      // row 26-29: lower legs
+      [_,_,_,_,c,C,D,D,D,_,_,_,_,_,_,D,D,D,C,c,_,_,_,_],
+      [_,_,_,_,_,C,D,D,D,_,_,_,_,_,_,D,D,D,C,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,D,_,_,_,_,_,_,D,D,D,C,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,D,_,_,_,_,_,_,D,D,D,C,_,_,_,_,_],
+      // row 30-31: ankles
+      [_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_],
+      // row 32-33: boots
+      [_,_,_,_,_,b,B,B,B,b,_,_,_,_,b,B,B,B,b,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,B,b,_,_,_,_,b,B,B,B,b,_,_,_,_,_],
+      // row 34-35: boot soles
+      [_,_,_,_,b,B,B,B,B,B,_,_,_,_,B,B,B,B,B,b,_,_,_,_],
+      [_,_,_,_,b,B,B,B,B,B,_,_,_,_,B,B,B,B,B,b,_,_,_,_],
+    ];
+
+    // IDLE frame 2 (subtle breathing - cloak/chest rises 1px in mid section)
+    const VIN_IDLE_2 = VIN_IDLE_1.map((row, r) => {
+      // Shift rows 14-19 up by reusing rows — simulated by making row 13 = row 14 content slightly modified
+      if (r === 13) return [_,_,H,c,C,C,D,D,d,d,D,D,D,D,d,d,D,D,C,C,c,H,_,_];
+      if (r === 14) return [_,_,_,c,C,C,D,D,d,D,D,D,D,D,D,d,D,D,C,C,c,_,_,_];
+      if (r === 19) return [_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_];
+      return row;
+    });
+
+    // JUMP frame (cloak billowing downward/behind, arms up)
+    const VIN_JUMP = [
+      [_,_,_,_,_,_,_,_,H,H,H,H,H,H,H,H,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,H,H,h,H,H,H,H,h,H,H,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,H,H,h,H,H,H,H,H,H,h,H,H,_,_,_,_,_,_],
+      [_,_,_,_,_,H,H,H,H,H,H,H,H,H,H,H,H,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,H,s,S,S,S,S,S,S,s,H,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,s,S,E,e,S,S,E,e,S,s,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,s,S,S,S,S,M,S,S,S,s,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,s,S,S,M,M,M,S,S,S,s,H,H,_,_,_,_,_],
+      [_,_,_,_,H,H,H,s,S,S,S,s,s,S,S,S,s,H,H,H,_,_,_,_],
+      [_,_,_,_,H,H,_,_,s,S,S,S,S,S,S,s,_,_,H,H,_,_,_,_],
+      // arms raised, cloak spread
+      [_,_,C,c,D,D,C,C,C,D,D,D,D,D,D,C,C,C,D,D,c,C,_,_],
+      [_,C,c,_,_,D,C,C,D,D,D,D,D,D,D,D,C,C,D,_,_,c,C,_],
+      [C,c,_,_,_,c,C,D,D,D,D,D,D,D,D,D,D,C,c,_,_,_,c,C],
+      [_,_,_,_,_,c,C,D,D,d,D,D,D,D,d,D,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,d,d,D,D,D,D,d,d,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,d,D,D,D,D,D,D,d,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,D,D,D,D,D,D,D,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,D,_,_,_,_,D,D,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,_,_,_,_,_,_,D,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,_,_,_,_,_,_,D,D,C,c,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,_,_,_,_,_,_,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,_,_,_,_,_,_,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,_,_,_,_,_,_,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,_,_,_,_,_,_,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,b,B,B,b,_,_,_,_,b,B,B,b,_,_,_,_,_,_],
+      [_,_,_,_,_,_,b,B,B,b,_,_,_,_,b,B,B,b,_,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,B,B,_,_,_,_,B,B,B,B,b,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,B,B,_,_,_,_,B,B,B,B,b,_,_,_,_,_],
+    ];
+
+    // FALL frame (cloak streaming upward)
+    const VIN_FALL = [
+      [_,_,_,_,_,_,_,_,H,H,H,H,H,H,H,H,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,H,H,h,H,H,H,H,h,H,H,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,H,H,h,H,H,H,H,H,H,h,H,H,_,_,_,_,_,_],
+      [_,_,_,_,_,H,H,H,H,H,H,H,H,H,H,H,H,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,H,s,S,S,S,S,S,S,s,H,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,s,S,E,e,S,S,E,e,S,s,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,s,S,S,S,S,M,S,S,S,s,H,H,_,_,_,_,_],
+      [_,_,_,_,_,H,H,s,S,S,M,M,M,S,S,S,s,H,H,_,_,_,_,_],
+      [_,_,_,_,H,H,H,s,S,S,S,s,s,S,S,S,s,H,H,H,_,_,_,_],
+      [_,_,_,_,H,H,_,_,s,S,S,S,S,S,S,s,_,_,H,H,_,_,_,_],
+      // cloak billows UP and out
+      [_,c,C,C,c,c,C,C,C,D,D,D,D,D,D,C,C,C,c,c,C,C,c,_],
+      [c,C,C,c,_,_,C,C,D,D,D,D,D,D,D,D,C,C,_,_,c,C,C,c],
+      [C,c,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,c,C],
+      [_,_,_,_,_,_,C,D,D,d,D,D,D,D,d,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,d,d,D,D,D,D,d,d,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,d,D,D,D,D,D,D,d,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,D,D,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,D,_,_,D,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,C,D,D,D,_,_,_,_,D,D,D,C,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,b,B,B,b,_,_,_,_,b,B,B,b,_,_,_,_,_,_],
+      [_,_,_,_,_,_,b,B,B,b,_,_,_,_,b,B,B,b,_,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,B,B,_,_,_,_,B,B,B,B,b,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,B,B,_,_,_,_,B,B,B,B,b,_,_,_,_,_],
+    ];
+
+    // RUN frames (6 frames) - legs alternate, cloak flows
+    function makeRunFrame(legPhase, cloakShift) {
+      // Base body same as idle top (rows 0-19), different legs
+      const frame = [];
+      // Head (rows 0-9) same as idle
+      for (let r = 0; r <= 9; r++) frame.push([...VIN_IDLE_1[r]]);
+
+      // Shoulders - slightly leaned forward
+      frame.push([_,_,_,H,H,c,C,C,C,D,D,D,D,D,D,C,C,C,c,H,H,_,_,_]); // 10
+      frame.push([_,_,H,H,c,C,C,C,D,D,D,D,D,D,D,D,C,C,C,c,H,H,_,_]); // 11
+
+      // Torso (rows 12-19)
+      frame.push([_,_,H,c,C,C,C,D,D,D,D,D,D,D,D,D,D,C,C,C,c,H,_,_]); // 12
+      frame.push([_,_,_,c,C,C,D,D,D,d,D,D,D,D,d,D,D,D,C,C,c,_,_,_]); // 13
+      frame.push([_,_,_,c,C,C,D,D,d,d,D,D,D,D,d,d,D,D,C,C,c,_,_,_]); // 14
+      frame.push([_,_,_,c,C,C,D,D,d,D,D,D,D,D,D,d,D,D,C,C,c,_,_,_]); // 15
+      frame.push([_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_]); // 16
+      frame.push([_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_]); // 17
+      frame.push([_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_]); // 18
+      frame.push([_,_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,D,C,C,c,_,_,_,_]); // 19
+
+      // Legs depend on phase (0-5)
+      // cloak trailing adds pixels on the back side
+      const legFrames = [
+        // phase 0: right leg forward, left back
+        [
+          [_,_,_,_,c,C,D,D,D,D,D,_,_,D,D,D,D,D,C,c,_,_,_,_], // 20
+          [_,_,_,_,c,C,D,D,D,D,_,_,_,_,D,D,D,C,C,c,_,_,_,_], // 21
+          [_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,D,D,D,C,_,_,_,_,_], // 22
+          [_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,D,D,C,_,_,_,_,_], // 23
+          [_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_], // 24
+          [_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_], // 25
+          [_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_], // 26
+          [_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_], // 27
+          [_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_], // 28
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_], // 29
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_], // 30
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_], // 31
+          [_,_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_,_], // 32
+          [_,_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_,_], // 33
+          [_,b,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_,B,B,B,B,b,_,_], // 34
+          [_,b,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_,B,B,B,B,b,_,_], // 35
+        ],
+        // phase 1: right leg more forward, left further back
+        [
+          [_,_,_,_,c,C,D,D,D,D,D,_,_,D,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,_,D,D,D,D,D,_,_,_,_,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,D,D,D,_,c,_,_,_,_],
+          [_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_],
+          [_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_],
+          [_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_],
+          [_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_],
+          [_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_],
+          [_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_],
+          [b,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_,_,_,B,B,B,B,b,_],
+          [b,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_,_,_,B,B,B,B,b,_],
+        ],
+        // phase 2: legs passing (right coming back, left coming forward)
+        [
+          [_,_,_,_,c,C,D,D,D,D,D,_,_,D,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,c,C,D,D,D,D,_,_,_,_,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,_,C,D,D,D,_,_,_,_,_,_,D,D,D,C,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,D,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,D,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,D,D,D,_,_,_,D,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,D,D,D,_,_,_,D,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,D,D,D,_,D,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,D,D,D,_,D,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,b,B,B,B,B,B,b,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,b,B,B,B,B,B,b,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,b,B,B,B,B,B,B,B,b,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,b,B,B,B,B,B,B,B,b,_,_,_,_,_,_,_,_],
+        ],
+        // phase 3: left leg forward, right back (mirror of phase 0)
+        [
+          [_,_,_,_,c,C,D,D,D,D,D,_,_,D,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,c,C,C,D,D,D,_,_,_,_,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,_,C,D,D,D,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_],
+          [_,_,_,_,_,C,D,D,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_],
+          [_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_],
+          [_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,D,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,D,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_,_],
+          [_,_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_,_],
+          [_,_,B,B,B,B,b,_,_,_,_,_,_,_,_,_,_,B,B,B,B,_,_,_],
+          [_,_,B,B,B,B,b,_,_,_,_,_,_,_,_,_,_,B,B,B,B,_,_,_],
+        ],
+        // phase 4: left more forward, right further back (mirror of phase 1)
+        [
+          [_,_,_,_,c,C,D,D,D,D,D,_,_,D,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,c,C,D,D,D,D,_,_,_,_,D,D,D,D,D,_,_,_,_,_],
+          [_,_,_,_,c,_,D,D,D,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_],
+          [_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,D,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_],
+          [_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_],
+          [_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,_,_,b,B,B,b,_],
+          [_,B,B,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,B,B,B,B,b,_],
+          [_,B,B,B,B,b,_,_,_,_,_,_,_,_,_,_,_,_,B,B,B,B,b,_],
+        ],
+        // phase 5: legs passing other direction (mirror of phase 2)
+        [
+          [_,_,_,_,c,C,D,D,D,D,D,_,_,D,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,c,C,D,D,D,D,_,_,_,_,D,D,D,D,C,c,_,_,_,_],
+          [_,_,_,_,_,C,D,D,D,_,_,_,_,_,_,D,D,D,C,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,D,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,D,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,D,D,D,_,_,_,D,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,D,D,D,_,_,_,D,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,D,D,D,_,D,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,D,D,D,_,D,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,b,B,B,B,B,B,b,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,b,B,B,B,B,B,b,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,b,B,B,B,B,B,B,B,b,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,b,B,B,B,B,B,B,B,b,_,_,_,_,_,_,_,_],
+        ],
+      ];
+
+      const legs = legFrames[legPhase];
+      for (let i = 0; i < legs.length; i++) frame.push(legs[i]);
+      return frame;
+    }
+
+    const VIN_RUN = [];
+    for (let i = 0; i < 6; i++) VIN_RUN.push(makeRunFrame(i, i));
+
+    // ATTACK frames (arm extends with knife, slash arc)
+    const VIN_ATTACK_1 = VIN_IDLE_1.map((row, r) => {
+      // Arm reaching out with knife on rows 12-16
+      if (r === 11) return [_,_,H,H,c,C,C,C,D,D,D,D,D,D,D,D,C,C,C,c,H,H,_,_];
+      if (r === 12) return [_,_,H,c,C,C,C,D,D,D,D,D,D,D,D,D,D,C,C,C,c,k,K,_];
+      if (r === 13) return [_,_,_,c,C,C,D,D,D,d,D,D,D,D,d,D,D,D,C,C,k,K,K,_];
+      if (r === 14) return [_,_,_,c,C,C,D,D,d,d,D,D,D,D,d,d,D,D,C,C,c,_,_,_];
+      return [...row];
+    });
+
+    const VIN_ATTACK_2 = VIN_IDLE_1.map((row, r) => {
+      // Slash arc — knife swung through, arm extended with arc effect
+      if (r === 10) return [_,_,_,H,H,c,C,C,C,D,D,D,D,D,D,C,C,C,c,H,H,K,_,_];
+      if (r === 11) return [_,_,H,H,c,C,C,C,D,D,D,D,D,D,D,D,C,C,C,c,K,K,K,_];
+      if (r === 12) return [_,_,H,c,C,C,C,D,D,D,D,D,D,D,D,D,D,C,C,k,K,K,_,_];
+      if (r === 13) return [_,_,_,c,C,C,D,D,D,d,D,D,D,D,d,D,D,D,k,K,c,_,_,_];
+      if (r === 14) return [_,_,_,c,C,C,D,D,d,d,D,D,D,D,d,d,D,k,C,C,c,_,_,_];
+      if (r === 15) return [_,_,_,c,C,C,D,D,d,D,D,D,D,D,D,d,K,D,C,C,c,_,_,_];
+      if (r === 16) return [_,_,_,c,C,C,D,D,D,D,D,D,D,D,D,K,D,D,C,C,c,_,_,_];
+      return [...row];
+    });
+
+    // All animation frame sets
+    const SPRITE_FRAMES = {
+      idle: [VIN_IDLE_1, VIN_IDLE_2],
+      run: VIN_RUN,
+      jump: [VIN_JUMP],
+      fall: [VIN_FALL],
+      attack: [VIN_ATTACK_1, VIN_ATTACK_2],
+    };
+
+    // --- Animation State Machine ---
+    const anim = {
+      state: 'idle',
+      frame: 0,
+      timer: 0,
+      frameTimes: {
+        idle: 0.5,
+        run: 0.1,
+        jump: 0.2,
+        fall: 0.2,
+        attack: 0.1,
+      },
+      attackPlaying: false,
+      attackTimer: 0,
+    };
+
+    function updateAnimation(dt) {
+      // Determine desired state
+      let desiredState = 'idle';
+
+      if (anim.attackPlaying) {
+        desiredState = 'attack';
+        anim.attackTimer -= dt;
+        if (anim.attackTimer <= 0) {
+          anim.attackPlaying = false;
+        }
+      } else if (input.attack && !anim.attackPlaying) {
+        anim.attackPlaying = true;
+        anim.attackTimer = anim.frameTimes.attack * SPRITE_FRAMES.attack.length;
+        desiredState = 'attack';
+        anim.frame = 0;
+        anim.timer = 0;
+      } else if (!player.onGround && player.vy < 0) {
+        desiredState = 'jump';
+      } else if (!player.onGround && player.vy >= 0) {
+        desiredState = 'fall';
+      } else if (Math.abs(player.vx) > 10) {
+        desiredState = 'run';
+      }
+
+      // State change resets frame
+      if (desiredState !== anim.state) {
+        anim.state = desiredState;
+        anim.frame = 0;
+        anim.timer = 0;
+      }
+
+      // Advance frame timer
+      anim.timer += dt;
+      const ft = anim.frameTimes[anim.state];
+      if (anim.timer >= ft) {
+        anim.timer -= ft;
+        anim.frame++;
+        const maxFrames = SPRITE_FRAMES[anim.state].length;
+        if (anim.frame >= maxFrames) {
+          anim.frame = 0;
+        }
+      }
+    }
+
+    // --- Sprite Renderer ---
+    function drawSprite(spriteData, x, y, flip) {
+      const w = spriteData[0].length;
+      const h = spriteData.length;
+      // Use ImageData for efficient pixel-by-pixel rendering
+      // But for simplicity and since the sprite is small, use fillRect
+      for (let row = 0; row < h; row++) {
+        for (let col = 0; col < w; col++) {
+          const color = spriteData[row][col];
+          if (color === null) continue;
+          ctx.fillStyle = color;
+          const px = flip ? x + (w - 1 - col) : x + col;
+          const py = y + row;
+          ctx.fillRect(px, py, 1, 1);
+        }
+      }
+    }
+
+    function renderPlayer() {
+      const screenX = Math.round(player.x - camera.x);
+      const screenY = Math.round(player.y - camera.y);
+
+      const frames = SPRITE_FRAMES[anim.state];
+      const spriteData = frames[anim.frame % frames.length];
+      const flip = player.facing === -1;
+      drawSprite(spriteData, screenX, screenY, flip);
     }
 
     // --- Parallax Background ---
@@ -888,6 +1313,7 @@
 
       // Update
       updatePlayer(safeDt);
+      updateAnimation(safeDt);
       updateCamera();
 
       // Clear + background (sky gradient replaces flat clear)
