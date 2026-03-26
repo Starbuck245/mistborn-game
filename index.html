@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta property="og:title" content="Mistborn: Ash and Shadows">
+  <meta property="og:description" content="A 2D platformer set in the world of Mistborn. Play as Vin, survive the streets of Luthadel, and discover your hidden power.">
+  <meta property="og:type" content="website">
+  <meta name="description" content="A 2D platformer set in the world of Mistborn. Play as Vin, survive the streets of Luthadel, and discover your hidden power.">
   <title>Mistborn: Ash and Shadows</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1534,14 +1538,56 @@
           const screenY = r * TILE - camera.y;
 
           if (tile === TILE_SOLID) {
-            ctx.fillStyle = '#3a3040';
+            // Section-based color variation
+            let baseColor, edgeColor, gridColor;
+            if (c >= 140) {
+              // Dead End: darker, reddish-grey, oppressive
+              baseColor = '#2e2028';
+              edgeColor = '#3e2a32';
+              gridColor = '#1e1520';
+            } else if (c >= 70) {
+              // Border: slightly cooler, more grey
+              baseColor = '#36303e';
+              edgeColor = '#46405a';
+              gridColor = '#26202e';
+            } else {
+              // Slums: warm dark purple
+              baseColor = '#3a3040';
+              edgeColor = '#4a4050';
+              gridColor = '#2a2030';
+            }
+            ctx.fillStyle = baseColor;
             ctx.fillRect(screenX, screenY, TILE, TILE);
             // Lighter top edge for surface look
-            ctx.fillStyle = '#4a4050';
+            ctx.fillStyle = edgeColor;
             ctx.fillRect(screenX, screenY, TILE, 3);
             // Subtle grid line
-            ctx.strokeStyle = '#2a2030';
+            ctx.strokeStyle = gridColor;
             ctx.strokeRect(screenX, screenY, TILE, TILE);
+
+            // Section transition decorations
+            // Slums -> Border gate (around col 69-70)
+            if (c === 69 && r >= 10 && r <= 16) {
+              ctx.fillStyle = '#2a1a1a';
+              ctx.fillRect(screenX + TILE - 4, screenY, 4, TILE);
+              // Broken gate bars
+              if (r === 10 || r === 12 || r === 14) {
+                ctx.fillStyle = '#4a3a2a';
+                ctx.fillRect(screenX + TILE - 6, screenY + 4, 6, TILE - 8);
+              }
+            }
+            if (c === 70 && r >= 10 && r <= 16) {
+              ctx.fillStyle = '#2a1a1a';
+              ctx.fillRect(screenX, screenY, 4, TILE);
+            }
+            // Border -> Dead End warning (around col 140-142)
+            if (c >= 140 && c <= 142 && r >= 10 && r <= 16) {
+              // Red-tinted warning stripes on the walls
+              if ((r + c) % 2 === 0) {
+                ctx.fillStyle = 'rgba(120, 30, 30, 0.15)';
+                ctx.fillRect(screenX, screenY, TILE, TILE);
+              }
+            }
           } else if (tile === TILE_CRUMBLE) {
             const ckey = r + ',' + c;
             const cs = crumbleState[ckey];
@@ -2497,8 +2543,8 @@
     // Place vial pickups (health restore) - 5 throughout the level, before hard sections
     pickups.push(createPickup(25 * TILE, 14 * TILE, 'vial'));   // Slums, before toxic puddle
     pickups.push(createPickup(50 * TILE, 13 * TILE, 'vial'));   // Mid-slums
-    pickups.push(createPickup(80 * TILE, 13 * TILE, 'vial'));   // Early border
-    pickups.push(createPickup(120 * TILE, 13 * TILE, 'vial'));  // Mid border
+    pickups.push(createPickup(78 * TILE, 11 * TILE, 'vial'));   // Early border, above gap
+    pickups.push(createPickup(109 * TILE, 12 * TILE, 'vial'));  // Mid border, on platforms over big gap
     pickups.push(createPickup(155 * TILE, 13 * TILE, 'vial'));  // Dead end area
 
     // Place boxing (coin) pickups - 25 spread throughout
@@ -2516,15 +2562,15 @@
     pickups.push(createPickup(60 * TILE, 14 * TILE, 'boxing'));
     pickups.push(createPickup(65 * TILE, 15 * TILE, 'boxing'));
     // Border section (cols 70-139)
-    pickups.push(createPickup(75 * TILE, 14 * TILE, 'boxing'));
-    pickups.push(createPickup(82 * TILE, 12 * TILE, 'boxing'));
+    pickups.push(createPickup(73 * TILE, 6 * TILE, 'boxing'));
+    pickups.push(createPickup(83 * TILE, 5 * TILE, 'boxing'));
     pickups.push(createPickup(88 * TILE, 14 * TILE, 'boxing'));
     pickups.push(createPickup(95 * TILE, 13 * TILE, 'boxing'));
     pickups.push(createPickup(100 * TILE, 15 * TILE, 'boxing'));
     pickups.push(createPickup(108 * TILE, 14 * TILE, 'boxing'));
     pickups.push(createPickup(115 * TILE, 13 * TILE, 'boxing'));
-    pickups.push(createPickup(125 * TILE, 14 * TILE, 'boxing'));
-    pickups.push(createPickup(130 * TILE, 12 * TILE, 'boxing'));
+    pickups.push(createPickup(127 * TILE, 2 * TILE, 'boxing'));
+    pickups.push(createPickup(132 * TILE, 12 * TILE, 'boxing'));
     // Dead End section (cols 140-199)
     pickups.push(createPickup(145 * TILE, 14 * TILE, 'boxing'));
     pickups.push(createPickup(152 * TILE, 13 * TILE, 'boxing'));
@@ -2783,7 +2829,7 @@
 
           // Detection: within 150px horizontal and 64px vertical
           const wasDetecting = e.detecting;
-          e.detecting = absDx < 150 && absDy < 64 && player.alive !== false;
+          e.detecting = absDx < 150 && absDy < 64 && !player.dead;
 
           if (e.detecting && !wasDetecting) {
             playSound('guardAlert');
@@ -3003,36 +3049,32 @@
       }
     }
 
-    // --- Place thugs in the Slums (cols 0-69) ---
-    // Ground is at row 17, so standing y = 17*32 - 36 = 508
-    // Raised section cols 34-40 at row 15, y = 15*32 - 36 = 444
-    // Wide raised area cols 54-62 at row 15, y = 15*32 - 36 = 444
-    enemies.push(createThug(10 * 32, 17 * 32 - 36, 1 * 32, 12 * 32));    // patrol on ground cols 1-12
-    enemies.push(createThug(25 * 32, 17 * 32 - 36, 22 * 32, 29 * 32));   // patrol on ground cols 22-29
-    enemies.push(createThug(37 * 32, 15 * 32 - 36, 34 * 32, 40 * 32));   // on raised section cols 34-40
-    enemies.push(createThug(57 * 32, 15 * 32 - 36, 54 * 32, 62 * 32));   // on wide raised area cols 54-62
-    enemies.push(createThug(64 * 32, 17 * 32 - 36, 60 * 32, 67 * 32));   // near section end
+    // --- Enemy Initialization ---
+    function initEnemies() {
+      enemies.length = 0;
+      // --- Place thugs in the Slums (cols 0-69) ---
+      enemies.push(createThug(10 * 32, 17 * 32 - 36, 1 * 32, 12 * 32));    // patrol on ground cols 1-12
+      enemies.push(createThug(25 * 32, 17 * 32 - 36, 22 * 32, 29 * 32));   // patrol on ground cols 22-29
+      enemies.push(createThug(37 * 32, 15 * 32 - 36, 34 * 32, 40 * 32));   // on raised section cols 34-40
+      enemies.push(createThug(57 * 32, 15 * 32 - 36, 54 * 32, 62 * 32));   // on wide raised area cols 54-62
+      enemies.push(createThug(64 * 32, 17 * 32 - 36, 60 * 32, 67 * 32));   // near section end
 
-    // --- Place guards in the Border (cols 70-139) ---
-    // Ground at row 17, y = 17*32 - 40 = 504
-    // Tall building cols 70-75, top at row 8, surface y = 8*32 - 40 = 216
-    // Building cols 80-85, top at row 11, y = 11*32 - 40 = 312
-    // Raised terrain cols 113-120, top at row 13, y = 13*32 - 40 = 376
-    // Tall structure cols 124-130, top at row 7, y = 7*32 - 40 = 184
-    enemies.push(createGuard(72 * 32, 8 * 32 - 40, 70 * 32, 75 * 32));    // on tall building roof
-    enemies.push(createGuard(82 * 32, 11 * 32 - 40, 80 * 32, 85 * 32));   // on medium building roof
-    enemies.push(createGuard(100 * 32, 10 * 32 - 40, 98 * 32, 103 * 32)); // on building cols 98-103
-    enemies.push(createGuard(116 * 32, 13 * 32 - 40, 113 * 32, 120 * 32)); // on raised terrain
+      // --- Place guards in the Border (cols 70-139) ---
+      enemies.push(createGuard(72 * 32, 8 * 32 - 40, 70 * 32, 75 * 32));    // on tall building roof
+      enemies.push(createGuard(82 * 32, 11 * 32 - 40, 80 * 32, 85 * 32));   // on medium building roof
+      enemies.push(createGuard(100 * 32, 10 * 32 - 40, 98 * 32, 103 * 32)); // on building cols 98-103
+      enemies.push(createGuard(116 * 32, 13 * 32 - 40, 113 * 32, 120 * 32)); // on raised terrain
 
-    // --- Dead End Guards (cols 165-195) ---
-    // These guards corner the player in the dead end
-    const deadEndGuard1 = createGuard(168 * 32, 14 * 32 - 40, 165 * 32, 175 * 32);
-    const deadEndGuard2 = createGuard(175 * 32, 14 * 32 - 40, 170 * 32, 180 * 32);
-    const deadEndGuard3 = createGuard(182 * 32, 13 * 32 - 40, 178 * 32, 190 * 32);
-    enemies.push(deadEndGuard1);
-    enemies.push(deadEndGuard2);
-    enemies.push(deadEndGuard3);
-    deadEndGuards = [deadEndGuard1, deadEndGuard2, deadEndGuard3];
+      // --- Dead End Guards (cols 165-195) ---
+      const dg1 = createGuard(168 * 32, 14 * 32 - 40, 165 * 32, 175 * 32);
+      const dg2 = createGuard(175 * 32, 14 * 32 - 40, 170 * 32, 180 * 32);
+      const dg3 = createGuard(182 * 32, 13 * 32 - 40, 178 * 32, 190 * 32);
+      enemies.push(dg1);
+      enemies.push(dg2);
+      enemies.push(dg3);
+      deadEndGuards = [dg1, dg2, dg3];
+    }
+    initEnemies();
 
     function renderPlayer() {
       const screenX = Math.round(player.x - camera.x);
@@ -4087,22 +4129,15 @@
       player.luckCooldown = 0;
       player.luckActive = false;
       player.onGround = false;
-      // Reset dead end guards
-      deadEndGuard1.alive = true; deadEndGuard1.hp = 2; deadEndGuard1.deathTimer = 0;
-      deadEndGuard1.x = 168 * 32; deadEndGuard1.soothed = false;
-      deadEndGuard2.alive = true; deadEndGuard2.hp = 2; deadEndGuard2.deathTimer = 0;
-      deadEndGuard2.x = 175 * 32; deadEndGuard2.soothed = false;
-      deadEndGuard3.alive = true; deadEndGuard3.hp = 2; deadEndGuard3.deathTimer = 0;
-      deadEndGuard3.x = 182 * 32; deadEndGuard3.soothed = false;
-      // Reset other enemies
-      for (const e of enemies) {
-        if (!deadEndGuards.includes(e)) {
-          e.alive = true;
-          e.hp = e.maxHp;
-          e.deathTimer = 0;
-          e.soothed = false;
-          e.sootheTimer = 0;
-        }
+      // Rebuild all enemies from scratch (some may have been spliced)
+      initEnemies();
+      // Reset pickups
+      for (const p of pickups) {
+        p.collected = false;
+      }
+      // Reset crumble state
+      for (const key in crumbleState) {
+        delete crumbleState[key];
       }
       anyKeyFlag = false;
       // Reset environment
