@@ -278,14 +278,14 @@
       const t = audioCtx.currentTime;
       const ramp = 1.0; // 1 second crossfade
 
-      if (cx >= 140 * 32) {
+      if (cx >= 140 * TILE) {
         // Dead End: tension drone, faster rhythm
         if (currentSection !== 'deadend') {
           currentSection = 'deadend';
           musicNodes.tensionGain.gain.linearRampToValueAtTime(1.0, t + ramp);
           musicNodes.setRhythmGain(0.07);
         }
-      } else if (cx >= 70 * 32) {
+      } else if (cx >= 70 * TILE) {
         // Border: slightly faster, deeper
         if (currentSection !== 'border') {
           currentSection = 'border';
@@ -607,31 +607,31 @@
     // --- Environmental Details ---
     // Lanterns placed at specific tile positions in the level
     const lanterns = [
-      { x: 12 * 32, y: 15 * 32 },
-      { x: 28 * 32, y: 14 * 32 },
-      { x: 48 * 32, y: 15 * 32 },
-      { x: 72 * 32, y: 14 * 32 },
-      { x: 95 * 32, y: 15 * 32 },
-      { x: 120 * 32, y: 14 * 32 },
-      { x: 150 * 32, y: 15 * 32 },
-      { x: 170 * 32, y: 14 * 32 },
+      { x: 12 * TILE, y: 15 * TILE },
+      { x: 28 * TILE, y: 14 * TILE },
+      { x: 48 * TILE, y: 15 * TILE },
+      { x: 72 * TILE, y: 14 * TILE },
+      { x: 95 * TILE, y: 15 * TILE },
+      { x: 120 * TILE, y: 14 * TILE },
+      { x: 150 * TILE, y: 15 * TILE },
+      { x: 170 * TILE, y: 14 * TILE },
     ];
 
     // Rats - small critters that scurry away when Vin approaches
     const rats = [
-      { x: 20 * 32, y: 16 * 32 - 3, triggered: false, vx: 0, alpha: 1 },
-      { x: 55 * 32, y: 16 * 32 - 3, triggered: false, vx: 0, alpha: 1 },
-      { x: 100 * 32, y: 16 * 32 - 3, triggered: false, vx: 0, alpha: 1 },
-      { x: 145 * 32, y: 16 * 32 - 3, triggered: false, vx: 0, alpha: 1 },
+      { x: 20 * TILE, y: 16 * TILE - 3, triggered: false, vx: 0, alpha: 1 },
+      { x: 55 * TILE, y: 16 * TILE - 3, triggered: false, vx: 0, alpha: 1 },
+      { x: 100 * TILE, y: 16 * TILE - 3, triggered: false, vx: 0, alpha: 1 },
+      { x: 145 * TILE, y: 16 * TILE - 3, triggered: false, vx: 0, alpha: 1 },
     ];
 
     // Steam/mist wisps in world space
     const steamWisps = [
-      { x: 15 * 32, y: 16 * 32, phase: 0 },
-      { x: 42 * 32, y: 16 * 32, phase: 1.5 },
-      { x: 80 * 32, y: 16 * 32, phase: 3.0 },
-      { x: 115 * 32, y: 16 * 32, phase: 4.5 },
-      { x: 160 * 32, y: 16 * 32, phase: 2.2 },
+      { x: 15 * TILE, y: 16 * TILE, phase: 0 },
+      { x: 42 * TILE, y: 16 * TILE, phase: 1.5 },
+      { x: 80 * TILE, y: 16 * TILE, phase: 3.0 },
+      { x: 115 * TILE, y: 16 * TILE, phase: 4.5 },
+      { x: 160 * TILE, y: 16 * TILE, phase: 2.2 },
     ];
 
     function updateEnvironment(dt) {
@@ -763,7 +763,8 @@
     window.addEventListener('touchstart', () => { anyKeyFlag = true; });
 
     // --- Tile Map ---
-    const TILE = 32;
+    const TILE = 48;
+    const SPRITE_SCALE = 2;
     const TILE_EMPTY = 0;
     const TILE_SOLID = 1;
     const TILE_CRUMBLE = 2;
@@ -868,6 +869,12 @@
       // Tall building (cols 70-75, rows 8-16)
       fillRect(70, 8, 75, 16, 1);
 
+      // Staircase up tall building (left side, cols 68-69)
+      fillRect(68, 15, 69, 15, 1);  // step 1
+      fillRect(68, 13, 69, 13, 1);  // step 2
+      fillRect(68, 11, 69, 11, 1);  // step 3
+      fillRect(68, 9, 69, 9, 1);    // step 4 (reach roof row 8)
+
       // Gap (cols 76-79)
       fillRect(76, 17, 79, 19, 0);
 
@@ -879,8 +886,14 @@
       // Medium building (cols 80-85, rows 11-16)
       fillRect(80, 11, 85, 16, 1);
 
+      // Staircase up medium building (left side, cols 78-79)
+      fillRect(78, 15, 79, 15, 1);  // step 1
+      fillRect(78, 13, 79, 13, 1);  // step 2 (reach roof row 11)
+
       // High platform (cols 82-84, row 7)
       fillRect(82, 7, 84, 7, 1);
+      // Step to reach high platform from building roof
+      fillRect(80, 9, 81, 9, 1);
 
       // Gap (cols 86-89)
       fillRect(86, 17, 89, 19, 0);
@@ -892,11 +905,21 @@
       // Tall tower (cols 90-93, rows 5-16)
       fillRect(90, 5, 93, 16, 1);
 
+      // Staircase up tall tower (left side, cols 88-89)
+      fillRect(88, 15, 89, 15, 1);  // step 1
+      fillRect(88, 11, 89, 11, 1);  // step 2
+      fillRect(88, 9, 89, 9, 1);    // step 3
+      fillRect(88, 7, 89, 7, 1);    // step 4 (reach roof row 5)
+
       // Bridge from tower (cols 94-97, row 8)
       fillRect(94, 8, 97, 8, 2); // crumbling bridge
 
       // Building (cols 98-103, rows 10-16)
       fillRect(98, 10, 103, 16, 1);
+
+      // Staircase up building (left side, cols 96-97)
+      fillRect(96, 15, 97, 15, 1);  // step 1
+      fillRect(96, 13, 97, 13, 1);  // step 2 (reach roof row 10)
 
       // Toxic area (cols 98-100 on ground level - already solid, put toxic on surface)
       fillRect(104, 16, 106, 16, 3);
@@ -919,12 +942,18 @@
       fillRect(121, 17, 123, 19, 0);
       fillRect(121, 13, 123, 16, 0);
 
-      // Floating platforms — added extra stepping stone
-      fillRect(121, 15, 121, 15, 1);  // lower step
-      fillRect(122, 13, 123, 13, 1);  // mid platform (lowered from 11 for reachability)
+      // Floating platforms — stepping stones across gap
+      fillRect(121, 15, 122, 15, 1);  // lower step (wider)
+      fillRect(122, 13, 123, 13, 1);  // mid platform
 
       // Tall structure (cols 124-130, rows 7-16)
       fillRect(124, 7, 130, 16, 1);
+
+      // Staircase up tall structure (left side, cols 122-123)
+      fillRect(122, 15, 123, 15, 1);  // step 1
+      fillRect(122, 13, 123, 13, 1);  // step 2
+      fillRect(122, 11, 123, 11, 1);  // step 3
+      fillRect(122, 9, 123, 9, 1);    // step 4 (reach roof row 7)
 
       // Platforms on top of structure
       fillRect(126, 4, 128, 4, 1);
@@ -1035,16 +1064,16 @@
 
     // --- Falling Ash Clumps ---
     const ashClumpSpawns = [
-      { x: 320, interval: 3, timer: 0 },
-      { x: 480, interval: 3.5, timer: 1.2 },
-      { x: 800, interval: 2.5, timer: 0 },
-      { x: 1100, interval: 2.8, timer: 0.8 },
-      { x: 1500, interval: 2.2, timer: 0 },
-      { x: 2400, interval: 2.0, timer: 0.5 },
-      { x: 2900, interval: 2.5, timer: 0 },
-      { x: 3400, interval: 3.0, timer: 1.0 },
-      { x: 3800, interval: 2.3, timer: 0.3 },
-      { x: 4400, interval: 2.7, timer: 0 },
+      { x: 480, interval: 3, timer: 0 },
+      { x: 720, interval: 3.5, timer: 1.2 },
+      { x: 1200, interval: 2.5, timer: 0 },
+      { x: 1650, interval: 2.8, timer: 0.8 },
+      { x: 2250, interval: 2.2, timer: 0 },
+      { x: 3600, interval: 2.0, timer: 0.5 },
+      { x: 4350, interval: 2.5, timer: 0 },
+      { x: 5100, interval: 3.0, timer: 1.0 },
+      { x: 5700, interval: 2.3, timer: 0.3 },
+      { x: 6600, interval: 2.7, timer: 0 },
     ];
     const ashClumps = [];
 
@@ -1081,7 +1110,7 @@
     const player = {
       x: SPAWN_X, y: SPAWN_Y,
       vx: 0, vy: 0,
-      width: 24, height: 36,
+      width: 48, height: 72,
       onGround: false,
       jumpHeld: false,
       jumpTime: 0,
@@ -1096,7 +1125,7 @@
       attacking: false,
       attackTimer: 0,
       attackDuration: 0.3,
-      attackHitbox: { x: 0, y: 0, width: 20, height: 20 },
+      attackHitbox: { x: 0, y: 0, width: 40, height: 40 },
       attackTriggered: false,
       // Health
       hp: 3,
@@ -1106,7 +1135,7 @@
       // Luck (Soothe) ability
       luckCooldown: 0,
       luckMaxCooldown: 5,
-      luckRadius: 120,
+      luckRadius: 180,
       luckActive: false,
       luckTriggered: false,
       // Pickups & death
@@ -1200,9 +1229,10 @@
       if (player.x < 0) { player.x = 0; player.vx = 0; }
       if (player.x + player.width > LEVEL_PX_W) { player.x = LEVEL_PX_W - player.width; player.vx = 0; }
 
-      // --- Fall off bottom: respawn ---
+      // --- Fall off bottom: death ---
       if (player.y > LEVEL_PX_H + 64) {
-        respawnPlayer();
+        player.dead = true;
+        player.deadTimer = 0;
       }
 
       // --- Knife attack ---
@@ -1223,11 +1253,11 @@
         player.attackTriggered = false;
       }
       // Update attack hitbox position
-      const hbOffsetX = player.facing === 1 ? player.width : -20;
+      const hbOffsetX = player.facing === 1 ? player.width : -40;
       player.attackHitbox.x = player.x + hbOffsetX;
-      player.attackHitbox.y = player.y + (player.height / 2) - 10;
-      player.attackHitbox.width = 20;
-      player.attackHitbox.height = 20;
+      player.attackHitbox.y = player.y + (player.height / 2) - 20;
+      player.attackHitbox.width = 40;
+      player.attackHitbox.height = 40;
 
       // Invincibility timer
       if (player.invincible) {
@@ -1442,8 +1472,8 @@
             playSound('playerHurt');
             addScreenShake(4, 0.2);
             if (player.hp <= 0) {
-              player.hp = player.maxHp;
-              respawnPlayer();
+              player.dead = true;
+              player.deadTimer = 0;
             }
           }
         }
@@ -1613,13 +1643,13 @@
             // Cracked look - draw some crack lines
             ctx.strokeStyle = '#5a5060';
             ctx.beginPath();
-            ctx.moveTo(screenX + shakeX + 4, screenY + shakeY + 8);
-            ctx.lineTo(screenX + shakeX + 16, screenY + shakeY + 16);
-            ctx.lineTo(screenX + shakeX + 28, screenY + shakeY + 10);
+            ctx.moveTo(screenX + shakeX + 6, screenY + shakeY + 12);
+            ctx.lineTo(screenX + shakeX + 24, screenY + shakeY + 24);
+            ctx.lineTo(screenX + shakeX + 42, screenY + shakeY + 15);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(screenX + shakeX + 10, screenY + shakeY + 22);
-            ctx.lineTo(screenX + shakeX + 20, screenY + shakeY + 28);
+            ctx.moveTo(screenX + shakeX + 15, screenY + shakeY + 33);
+            ctx.lineTo(screenX + shakeX + 30, screenY + shakeY + 42);
             ctx.stroke();
             // Top edge
             ctx.fillStyle = '#5a5565';
@@ -1642,9 +1672,9 @@
             ctx.lineWidth = 1.5;
             for (let w = 0; w < 3; w++) {
               ctx.beginPath();
-              const waveY = screenY + 8 + w * 9;
+              const waveY = screenY + 12 + w * 13;
               for (let px = 0; px < TILE; px += 2) {
-                const wy = waveY + Math.sin(t * 2.5 + bOff + px * 0.3 + w * 1.5) * 2.5;
+                const wy = waveY + Math.sin(t * 2.5 + bOff + px * 0.2 + w * 1.5) * 3.5;
                 if (px === 0) ctx.moveTo(screenX + px, wy);
                 else ctx.lineTo(screenX + px, wy);
               }
@@ -1653,28 +1683,28 @@
             ctx.restore();
             // Larger visible bubbles
             ctx.fillStyle = '#5a8a2a';
-            const b1s = 2 + Math.sin(t * 3 + bOff) * 1.5;
+            const b1s = 3 + Math.sin(t * 3 + bOff) * 2;
             ctx.beginPath();
-            ctx.arc(screenX + 8 + Math.sin(t * 2.5 + bOff) * 3, screenY + 10 + Math.cos(t * 1.8 + bOff) * 4, b1s, 0, Math.PI * 2);
+            ctx.arc(screenX + 12 + Math.sin(t * 2.5 + bOff) * 4, screenY + 15 + Math.cos(t * 1.8 + bOff) * 6, b1s, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#4a7a1a';
             ctx.beginPath();
-            ctx.arc(screenX + 22 + Math.cos(t * 2.0 + bOff + 1) * 3, screenY + 14 + Math.sin(t * 2.2 + bOff + 1) * 3, 2.5 + Math.cos(t * 2.5 + bOff) * 1, 0, Math.PI * 2);
+            ctx.arc(screenX + 33 + Math.cos(t * 2.0 + bOff + 1) * 4, screenY + 21 + Math.sin(t * 2.2 + bOff + 1) * 4, 3.5 + Math.cos(t * 2.5 + bOff) * 1.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(screenX + 14 + Math.sin(t * 1.7 + bOff + 2) * 4, screenY + 22 + Math.cos(t * 2.8 + bOff + 2) * 3, 3 + Math.sin(t * 2 + bOff + 2) * 1, 0, Math.PI * 2);
+            ctx.arc(screenX + 21 + Math.sin(t * 1.7 + bOff + 2) * 6, screenY + 33 + Math.cos(t * 2.8 + bOff + 2) * 4, 4 + Math.sin(t * 2 + bOff + 2) * 1.5, 0, Math.PI * 2);
             ctx.fill();
             // Rising green mist particles above puddle
             ctx.save();
             for (let p = 0; p < 4; p++) {
-              const px = screenX + 4 + ((p * 7 + Math.floor(t * 2 + bOff + p) * 5) % 24);
-              const pyBase = screenY - 2;
-              const pyOff = ((t * 20 + p * 17 + bOff * 3) % 20);
-              const pa = Math.max(0, 1 - pyOff / 20) * 0.4;
+              const px = screenX + 6 + ((p * 10 + Math.floor(t * 2 + bOff + p) * 7) % 36);
+              const pyBase = screenY - 3;
+              const pyOff = ((t * 20 + p * 17 + bOff * 3) % 30);
+              const pa = Math.max(0, 1 - pyOff / 30) * 0.4;
               ctx.globalAlpha = pa;
               ctx.fillStyle = 'rgba(100, 160, 40, 0.7)';
               ctx.beginPath();
-              ctx.arc(px + Math.sin(t + p) * 3, pyBase - pyOff, 2 + Math.sin(t * 1.5 + p) * 0.8, 0, Math.PI * 2);
+              ctx.arc(px + Math.sin(t + p) * 4, pyBase - pyOff, 3 + Math.sin(t * 1.5 + p) * 1.2, 0, Math.PI * 2);
               ctx.fill();
             }
             ctx.restore();
@@ -1683,9 +1713,9 @@
             ctx.globalAlpha = 0.15 + Math.sin(t * 1.5 + bOff) * 0.05;
             ctx.fillStyle = '#ffff00';
             // Simple skull shape: two eye dots and a jaw arc
-            ctx.fillRect(screenX + 11, screenY + 12, 2, 2);
-            ctx.fillRect(screenX + 17, screenY + 12, 2, 2);
-            ctx.fillRect(screenX + 12, screenY + 17, 6, 1);
+            ctx.fillRect(screenX + 17, screenY + 18, 3, 3);
+            ctx.fillRect(screenX + 26, screenY + 18, 3, 3);
+            ctx.fillRect(screenX + 18, screenY + 26, 9, 2);
             ctx.restore();
           }
         }
@@ -1711,184 +1741,184 @@
     const K = '#8090a0';     // knife blade
     const k = '#5a4030';     // knife handle
 
-    // IDLE frame 1 — Side profile facing RIGHT
+    // IDLE frame 1 — Side profile facing RIGHT — upright, lean, tall silhouette
     const VIN_IDLE_1 = [
-      // row 0-2: top of hair (side profile, hair flows behind to left)
-      [_,_,_,_,_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,H,H,h,H,H,H,H,H,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,H,H,h,H,H,H,H,H,H,_,_,_,_,_,_,_,_],
-      // row 3-4: hair + face top (profile: hair left, face right)
-      [_,_,_,_,_,_,H,H,H,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,H,s,S,S,S,S,_,_,_,_,_,_,_,_,_,_],
-      // row 5: eye (one eye visible in profile)
-      [_,_,_,_,_,_,H,H,s,S,E,e,S,S,_,_,_,_,_,_,_,_,_,_],
-      // row 6: nose (profile: nose protrudes right)
-      [_,_,_,_,_,_,H,H,s,S,S,S,M,S,S,_,_,_,_,_,_,_,_,_],
+      // row 0-2: top of hair
+      [_,_,_,_,_,_,_,_,_,_,H,H,H,H,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,H,h,H,H,H,H,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,H,h,H,H,H,H,_,_,_,_,_,_,_,_,_],
+      // row 3-4: hair + face top
+      [_,_,_,_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,s,S,S,S,S,_,_,_,_,_,_,_,_,_,_],
+      // row 5: eye
+      [_,_,_,_,_,_,_,_,H,S,E,e,S,S,_,_,_,_,_,_,_,_,_,_],
+      // row 6: nose
+      [_,_,_,_,_,_,_,_,H,S,S,S,M,S,S,_,_,_,_,_,_,_,_,_],
       // row 7: mouth
-      [_,_,_,_,_,_,H,H,s,S,M,M,S,S,_,_,_,_,_,_,_,_,_,_],
-      // row 8: chin + hair flowing behind
-      [_,_,_,_,H,H,H,H,s,S,S,s,S,_,_,_,_,_,_,_,_,_,_,_],
-      // row 9: neck + hair trailing
-      [_,_,_,H,H,h,_,_,_,s,S,S,s,_,_,_,_,_,_,_,_,_,_,_],
-      // row 10-11: shoulders + cloak (cloak trails behind to left)
-      [_,_,H,H,c,C,C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
-      [_,H,H,c,C,C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
-      // row 12-14: upper body + cloak trailing behind
-      [_,H,c,C,C,C,D,D,D,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_],
-      [_,c,C,C,C,D,D,D,d,D,D,D,D,_,k,_,_,_,_,_,_,_,_,_],
-      [_,c,C,C,D,D,D,d,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      // row 15-17: torso
-      [_,c,C,C,D,D,d,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,c,C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,c,C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // row 18-19: waist
-      [_,_,c,C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,c,C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // row 20-21: hips + cloak flare trailing
-      [_,c,C,C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [c,C,C,C,D,D,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      // row 22-25: legs (side profile, one in front of other)
-      [c,C,C,D,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [c,C,D,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,C,D,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,C,D,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      // row 26-29: lower legs
-      [_,_,D,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,D,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,D,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,M,S,S,_,_,_,_,_,_,_,_,_,_,_],
+      // row 8: chin + hair behind
+      [_,_,_,_,_,_,H,H,H,s,S,s,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 9: neck
+      [_,_,_,_,_,H,h,_,_,_,s,S,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 10-11: shoulders (slim, upright)
+      [_,_,_,_,_,c,C,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 12-13: upper torso with knife
+      [_,_,_,_,_,C,C,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,d,D,D,_,k,_,_,_,_,_,_,_,_,_,_,_],
+      // row 14-15: mid torso (narrow)
+      [_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 16-17: waist (slim)
+      [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 18-19: hips
+      [_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 20-23: upper legs (long, lean)
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      // row 24-27: lower legs
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      // row 28-29: shins
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
       // row 30-31: ankles
-      [_,_,_,D,D,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,D,D,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
       // row 32-33: boots
-      [_,_,b,B,B,b,_,_,_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,b,B,B,b,_,_,_,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,b,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,b,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
       // row 34-35: boot soles
-      [_,b,B,B,B,B,_,_,b,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
-      [_,b,B,B,B,B,_,_,b,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,b,B,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,b,B,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
-    // IDLE frame 2 (subtle breathing - slight cloak shift)
+    // IDLE frame 2 (subtle breathing - slight shift)
     const VIN_IDLE_2 = VIN_IDLE_1.map((row, r) => {
-      if (r === 13) return [_,c,C,C,D,D,D,d,D,D,D,D,_,_,k,_,_,_,_,_,_,_,_,_];
-      if (r === 14) return [_,c,C,C,D,D,d,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
-      if (r === 20) return [c,C,C,C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 13) return [_,_,_,_,_,C,D,d,D,D,D,_,k,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 15) return [_,_,_,_,_,_,D,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 18) return [_,_,_,_,_,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
       return row;
     });
 
-    // JUMP frame — side profile, cloak billowing down/behind, legs tucked
+    // JUMP frame — side profile, legs tucked, upright lean
     const VIN_JUMP = [
-      [_,_,_,_,_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,H,H,h,H,H,H,H,H,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,H,H,h,H,H,H,H,H,H,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,H,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,H,s,S,S,S,S,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,s,S,E,e,S,S,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,s,S,S,S,M,S,S,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,s,S,M,M,S,S,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,H,H,H,H,s,S,S,s,S,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,H,H,h,_,_,_,s,S,S,s,_,_,_,_,_,_,_,_,_,_,_],
-      // cloak streams down and behind
-      [_,_,H,H,c,C,C,C,D,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_],
-      [_,H,H,c,C,C,C,D,D,D,D,D,D,_,k,_,_,_,_,_,_,_,_,_],
-      [H,H,c,C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [H,c,C,C,D,D,D,d,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [c,C,C,D,D,D,d,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [c,C,D,D,D,d,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [C,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,C,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,C,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,C,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      // legs tucked up
-      [_,_,_,_,_,D,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,H,H,H,H,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,H,h,H,H,H,H,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,H,h,H,H,H,H,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,s,S,S,S,S,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,E,e,S,S,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,S,S,M,S,S,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,M,S,S,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,H,H,H,s,S,s,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,H,h,_,_,_,s,S,_,_,_,_,_,_,_,_,_,_,_,_],
+      // shoulders + upper body
+      [_,_,_,_,_,c,C,C,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,D,D,D,_,k,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      // legs tucked up for jump
+      [_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,b,B,B,b,B,B,b,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,b,B,B,b,B,B,b,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,b,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,b,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,b,B,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,b,B,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,b,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,b,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
-    // FALL frame — side profile, cloak streaming UP behind
+    // FALL frame — side profile, legs extended, upright
     const VIN_FALL = [
-      [_,_,_,_,_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,H,H,h,H,H,H,H,H,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,H,H,h,H,H,H,H,H,H,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,H,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,H,s,S,S,S,S,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,s,S,E,e,S,S,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,s,S,S,S,M,S,S,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,H,H,s,S,M,M,S,S,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,H,H,H,H,s,S,S,s,S,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,H,H,h,_,_,_,s,S,S,s,_,_,_,_,_,_,_,_,_,_,_],
-      // cloak billows UP
-      [c,C,C,C,c,C,C,C,D,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_],
-      [C,C,c,C,C,C,D,D,D,D,D,D,D,_,k,_,_,_,_,_,_,_,_,_],
-      [c,C,c,C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,c,C,C,D,D,D,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,C,C,D,D,d,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,C,D,D,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,H,H,H,H,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,H,h,H,H,H,H,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,H,h,H,H,H,H,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,H,H,H,H,H,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,s,S,S,S,S,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,E,e,S,S,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,S,S,M,S,S,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,H,S,M,S,S,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,H,H,H,s,S,s,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,H,h,_,_,_,s,S,_,_,_,_,_,_,_,_,_,_,_,_],
+      // shoulders
+      [_,_,_,_,_,c,C,C,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,c,C,D,D,D,D,D,_,k,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      // legs extended in fall
       [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,b,B,B,b,B,B,b,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,b,B,B,b,B,B,b,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,b,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,b,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,b,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,b,B,B,b,b,B,B,b,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,b,B,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,b,B,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
-    // RUN frames (6 frames) — side profile, cloak streams behind dramatically
+    // RUN frames (6 frames) — side profile, lean upright, long legs
     function makeRunFrame(legPhase, cloakShift) {
       const frame = [];
-      // Head (rows 0-9) same as idle side profile
+      // Head (rows 0-9) same as idle
       for (let r = 0; r <= 9; r++) frame.push([...VIN_IDLE_1[r]]);
 
-      // Shoulders - leaned forward, cloak streaming behind (6-8px trailing left)
-      frame.push([H,H,c,C,C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_]); // 10
-      frame.push([H,c,C,C,C,D,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_]); // 11
+      // Shoulders + torso (slim, upright, with knife)
+      frame.push([_,_,_,_,_,c,C,C,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_]); // 10
+      frame.push([_,_,_,_,_,c,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_]); // 11
+      frame.push([_,_,_,_,_,C,C,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_,_,_]); // 12
+      frame.push([_,_,_,_,_,C,D,D,d,D,D,_,k,_,_,_,_,_,_,_,_,_,_,_]); // 13
+      frame.push([_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 14
+      frame.push([_,_,_,_,_,_,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 15
+      frame.push([_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 16
+      frame.push([_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 17
+      frame.push([_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 18
+      frame.push([_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 19
 
-      // Torso (rows 12-19) — side profile with knife
-      frame.push([c,C,C,C,D,D,D,D,D,D,D,D,_,K,_,_,_,_,_,_,_,_,_,_]); // 12
-      frame.push([c,C,C,D,D,D,d,D,D,D,D,_,_,k,_,_,_,_,_,_,_,_,_,_]); // 13
-      frame.push([_,C,C,D,D,d,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 14
-      frame.push([_,C,C,D,d,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 15
-      frame.push([_,_,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 16
-      frame.push([_,_,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 17
-      frame.push([_,_,_,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 18
-      frame.push([_,_,_,C,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]); // 19
-
-      // Legs depend on phase — side profile running with strides
+      // Legs depend on phase — long lean strides
       const legFrames = [
         // phase 0: front leg forward, back leg behind
         [
-          [_,_,_,C,D,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,D,D,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,D,D,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,D,D,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
-          [_,_,D,D,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_],
           [_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_],
           [_,_,_,D,D,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_],
           [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
@@ -1902,34 +1932,34 @@
         ],
         // phase 1: stride extended
         [
-          [_,_,_,C,D,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,D,D,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,D,D,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
-          [_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
           [_,D,D,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_],
+          [_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
           [D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
-          [D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+          [D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_],
           [_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_],
-          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_],
-          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_],
-          [_,_,b,B,B,B,_,_,_,_,_,_,_,b,B,B,B,_,_,_,_,_,_,_],
-          [_,_,b,B,B,B,_,_,_,_,_,_,_,b,B,B,B,_,_,_,_,_,_,_],
-          [_,b,B,B,B,B,_,_,_,_,_,_,b,B,B,B,B,_,_,_,_,_,_,_],
-          [_,b,B,B,B,B,_,_,_,_,_,_,b,B,B,B,B,_,_,_,_,_,_,_],
+          [_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_],
+          [_,_,_,D,D,_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,D,D,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,b,B,B,B,_,_,_,_,_,_,b,B,B,B,_,_,_,_,_,_,_,_],
+          [_,_,b,B,B,B,_,_,_,_,_,_,b,B,B,B,_,_,_,_,_,_,_,_],
+          [_,b,B,B,B,B,_,_,_,_,_,b,B,B,B,B,_,_,_,_,_,_,_,_],
+          [_,b,B,B,B,B,_,_,_,_,_,b,B,B,B,B,_,_,_,_,_,_,_,_],
         ],
         // phase 2: legs passing
         [
-          [_,_,_,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
@@ -1940,18 +1970,18 @@
         ],
         // phase 3: opposite stride
         [
-          [_,_,_,C,D,D,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,D,D,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,D,D,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,_,_,D,D,_,D,D,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,b,B,B,b,B,B,b,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,b,B,B,b,B,B,b,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,b,B,B,B,B,B,B,B,_,_,_,_,_,_,_,_],
@@ -1959,10 +1989,8 @@
         ],
         // phase 4: stride extended opposite
         [
-          [_,_,_,C,D,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,_,_,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,_,_,_,D,D,_,_,_,_,_,_,_,_,_],
@@ -1971,6 +1999,8 @@
           [_,_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,b,B,B,B,B,b,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,b,B,B,B,B,b,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,b,B,B,B,B,B,B,_,_,_,_,_,_,_,_,_,_],
@@ -1978,15 +2008,15 @@
         ],
         // phase 5: legs passing again
         [
-          [_,_,_,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-          [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
+          [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
           [_,_,_,_,_,_,_,_,_,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_],
@@ -2008,22 +2038,22 @@
     // ATTACK frames — side profile, arm/knife extends RIGHT
     const VIN_ATTACK_1 = VIN_IDLE_1.map((row, r) => {
       // Arm reaching out with knife extended right
-      if (r === 11) return [_,H,c,C,C,C,D,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_];
-      if (r === 12) return [_,c,C,C,C,D,D,D,D,D,D,D,D,k,K,K,_,_,_,_,_,_,_,_];
-      if (r === 13) return [_,c,C,C,D,D,D,d,D,D,D,D,_,_,k,K,K,_,_,_,_,_,_,_];
-      if (r === 14) return [_,c,C,C,D,D,d,d,D,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 11) return [_,_,_,_,_,c,C,D,D,D,D,D,D,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 12) return [_,_,_,_,_,C,C,D,D,D,D,D,k,K,K,_,_,_,_,_,_,_,_,_];
+      if (r === 13) return [_,_,_,_,_,C,D,D,d,D,D,_,_,k,K,K,_,_,_,_,_,_,_,_];
+      if (r === 14) return [_,_,_,_,_,C,D,D,d,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
       return [...row];
     });
 
     const VIN_ATTACK_2 = VIN_IDLE_1.map((row, r) => {
       // Slash arc — knife swung through
-      if (r === 10) return [_,_,H,H,c,C,C,C,D,D,D,D,D,_,K,K,_,_,_,_,_,_,_,_];
-      if (r === 11) return [_,H,c,C,C,C,D,D,D,D,D,D,D,K,K,_,_,_,_,_,_,_,_,_];
-      if (r === 12) return [_,c,C,C,C,D,D,D,D,D,D,D,k,K,_,_,_,_,_,_,_,_,_,_];
-      if (r === 13) return [_,c,C,C,D,D,D,d,D,D,D,k,K,_,_,_,_,_,_,_,_,_,_,_];
-      if (r === 14) return [_,c,C,C,D,D,d,d,D,D,K,_,_,_,_,_,_,_,_,_,_,_,_,_];
-      if (r === 15) return [_,c,C,C,D,D,d,D,D,K,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
-      if (r === 16) return [_,_,C,D,D,D,D,D,K,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 10) return [_,_,_,_,_,c,C,C,D,D,D,D,_,K,K,_,_,_,_,_,_,_,_,_];
+      if (r === 11) return [_,_,_,_,_,c,C,D,D,D,D,D,K,K,_,_,_,_,_,_,_,_,_,_];
+      if (r === 12) return [_,_,_,_,_,C,C,D,D,D,D,k,K,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 13) return [_,_,_,_,_,C,D,D,d,D,k,K,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 14) return [_,_,_,_,_,C,D,D,d,K,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 15) return [_,_,_,_,_,_,D,D,K,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_];
+      if (r === 16) return [_,_,_,_,_,_,D,K,D,D,_,_,_,_,_,_,_,_,_,_,_,_,_,_];
       return [...row];
     });
 
@@ -2101,16 +2131,15 @@
     function drawSprite(spriteData, x, y, flip) {
       const w = spriteData[0].length;
       const h = spriteData.length;
-      // Use ImageData for efficient pixel-by-pixel rendering
-      // But for simplicity and since the sprite is small, use fillRect
+      const S = SPRITE_SCALE;
       for (let row = 0; row < h; row++) {
         for (let col = 0; col < w; col++) {
           const color = spriteData[row][col];
           if (color === null) continue;
           ctx.fillStyle = color;
-          const px = flip ? x + (w - 1 - col) : x + col;
-          const py = y + row;
-          ctx.fillRect(px, py, 1, 1);
+          const px = flip ? x + (w - 1 - col) * S : x + col * S;
+          const py = y + row * S;
+          ctx.fillRect(px, py, S, S);
         }
       }
     }
@@ -2384,7 +2413,7 @@
         type: 'thug',
         x, y,
         vx: 0, vy: 0,
-        width: 24, height: 36,
+        width: 48, height: 72,
         hp: 1,
         maxHp: 1,
         speed: 60,
@@ -2406,7 +2435,7 @@
         type: 'guard',
         x, y,
         vx: 0, vy: 0,
-        width: 26, height: 40,
+        width: 52, height: 80,
         hp: 2,
         maxHp: 2,
         speed: 80,
@@ -2426,7 +2455,7 @@
         attackCooldown: 1.5,
         attacking: false,
         attackDuration: 0.4,
-        swordHitbox: { x: 0, y: 0, width: 30, height: 24 },
+        swordHitbox: { x: 0, y: 0, width: 60, height: 48 },
         anim: { state: 'walk', frame: 0, timer: 0 },
       };
     }
@@ -2581,7 +2610,7 @@
     // --- Pickups System ---
     const pickups = [];
     function createPickup(x, y, type) {
-      return { x, y, width: type === 'vial' ? 12 : 10, height: type === 'vial' ? 16 : 10, type, collected: false, bobTimer: Math.random() * Math.PI * 2 };
+      return { x, y, width: type === 'vial' ? 24 : 20, height: type === 'vial' ? 32 : 20, type, collected: false, bobTimer: Math.random() * Math.PI * 2 };
     }
 
     // Place vial pickups (health restore) - 5 throughout the level, before hard sections
@@ -2684,49 +2713,49 @@
           // Glow behind vial
           ctx.save();
           ctx.globalAlpha = 0.25 + Math.sin(p.bobTimer * 1.5) * 0.1;
-          const glow = ctx.createRadialGradient(sx + 6, sy + 8, 0, sx + 6, sy + 8, 16);
+          const glow = ctx.createRadialGradient(sx + 12, sy + 16, 0, sx + 12, sy + 16, 32);
           glow.addColorStop(0, 'rgba(170,204,238,0.6)');
           glow.addColorStop(1, 'rgba(170,204,238,0)');
           ctx.fillStyle = glow;
-          ctx.fillRect(sx - 10, sy - 8, 32, 32);
+          ctx.fillRect(sx - 20, sy - 16, 64, 64);
           ctx.restore();
 
           // Vial body
           ctx.fillStyle = '#aaccee';
-          ctx.fillRect(sx + 2, sy + 4, 8, 12);
+          ctx.fillRect(sx + 4, sy + 8, 16, 24);
           // Vial neck
-          ctx.fillRect(sx + 3, sy, 6, 5);
+          ctx.fillRect(sx + 6, sy, 12, 10);
           // Vial cap
           ctx.fillStyle = '#889';
-          ctx.fillRect(sx + 4, sy - 1, 4, 2);
+          ctx.fillRect(sx + 8, sy - 2, 8, 4);
           // Highlight
           ctx.fillStyle = 'rgba(255,255,255,0.4)';
-          ctx.fillRect(sx + 3, sy + 5, 2, 8);
+          ctx.fillRect(sx + 6, sy + 10, 4, 16);
         } else if (p.type === 'boxing') {
           // Glow
           ctx.save();
           ctx.globalAlpha = 0.2 + Math.sin(p.bobTimer * 2) * 0.1;
-          const glow = ctx.createRadialGradient(sx + 5, sy + 5, 0, sx + 5, sy + 5, 12);
+          const glow = ctx.createRadialGradient(sx + 10, sy + 10, 0, sx + 10, sy + 10, 24);
           glow.addColorStop(0, 'rgba(218,165,32,0.5)');
           glow.addColorStop(1, 'rgba(218,165,32,0)');
           ctx.fillStyle = glow;
-          ctx.fillRect(sx - 7, sy - 7, 24, 24);
+          ctx.fillRect(sx - 14, sy - 14, 48, 48);
           ctx.restore();
 
           // Gold coin
           ctx.fillStyle = '#daa520';
           ctx.beginPath();
-          ctx.arc(sx + 5, sy + 5, 5, 0, Math.PI * 2);
+          ctx.arc(sx + 10, sy + 10, 10, 0, Math.PI * 2);
           ctx.fill();
           // Inner circle
           ctx.fillStyle = '#c89418';
           ctx.beginPath();
-          ctx.arc(sx + 5, sy + 5, 3, 0, Math.PI * 2);
+          ctx.arc(sx + 10, sy + 10, 6, 0, Math.PI * 2);
           ctx.fill();
           // Highlight
           ctx.fillStyle = 'rgba(255,255,255,0.4)';
           ctx.beginPath();
-          ctx.arc(sx + 4, sy + 4, 2, 0, Math.PI * 2);
+          ctx.arc(sx + 8, sy + 8, 4, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -2873,7 +2902,7 @@
 
           // Detection: within 150px horizontal and 64px vertical
           const wasDetecting = e.detecting;
-          e.detecting = absDx < 150 && absDy < 64 && !player.dead;
+          e.detecting = absDx < 225 && absDy < 96 && !player.dead;
 
           if (e.detecting && !wasDetecting) {
             playSound('guardAlert');
@@ -2882,15 +2911,15 @@
             // Face the player
             e.facing = dx > 0 ? 1 : -1;
 
-            if (absDx < 40) {
+            if (absDx < 60) {
               // In attack range: stop and swing sword
               e.vx = 0;
               if (!e.attacking && e.attackTimer <= 0) {
                 e.attacking = true;
                 e.attackTimer = 0;
                 // Update sword hitbox position
-                e.swordHitbox.x = e.facing === 1 ? e.x + e.width : e.x - 30;
-                e.swordHitbox.y = e.y + 8;
+                e.swordHitbox.x = e.facing === 1 ? e.x + e.width : e.x - 60;
+                e.swordHitbox.y = e.y + 16;
               }
             } else {
               // Chase the player
@@ -2914,8 +2943,8 @@
 
           // Update sword hitbox each frame while attacking
           if (e.attacking) {
-            e.swordHitbox.x = e.facing === 1 ? e.x + e.width : e.x - 30;
-            e.swordHitbox.y = e.y + 8;
+            e.swordHitbox.x = e.facing === 1 ? e.x + e.width : e.x - 60;
+            e.swordHitbox.y = e.y + 16;
           }
         } else {
           // Thug patrol AI
@@ -3007,8 +3036,8 @@
             addScreenShake(4, 0.2);
 
             if (player.hp <= 0) {
-              player.hp = player.maxHp;
-              respawnPlayer();
+              player.dead = true;
+              player.deadTimer = 0;
             }
           }
         }
@@ -3026,8 +3055,8 @@
             addScreenShake(4, 0.2);
 
             if (player.hp <= 0) {
-              player.hp = player.maxHp;
-              respawnPlayer();
+              player.dead = true;
+              player.deadTimer = 0;
             }
           }
         }
@@ -3066,9 +3095,9 @@
         if (e.type === 'guard' && e.attacking && e.alive) {
           const progress = e.attackTimer / e.attackDuration;
           const alpha = Math.max(0, 1 - progress * 1.5);
-          const cx = screenX + e.width / 2 + e.facing * (e.width / 2 + 12);
-          const cy = screenY + e.height / 2 - 4;
-          const radius = 16 + progress * 8;
+          const cx = screenX + e.width / 2 + e.facing * (e.width / 2 + 24);
+          const cy = screenY + e.height / 2 - 8;
+          const radius = 32 + progress * 16;
           const startAngle = e.facing === 1 ? -Math.PI * 0.6 : Math.PI * 0.4;
           const endAngle = e.facing === 1 ? Math.PI * 0.6 : Math.PI * 1.6;
 
@@ -3097,28 +3126,109 @@
     function initEnemies() {
       enemies.length = 0;
       // --- Place thugs in the Slums (cols 0-69) ---
-      enemies.push(createThug(10 * 32, 17 * 32 - 36, 1 * 32, 12 * 32));    // patrol on ground cols 1-12
-      enemies.push(createThug(25 * 32, 17 * 32 - 36, 22 * 32, 29 * 32));   // patrol on ground cols 22-29
-      enemies.push(createThug(37 * 32, 15 * 32 - 36, 34 * 32, 40 * 32));   // on raised section cols 34-40
-      enemies.push(createThug(57 * 32, 15 * 32 - 36, 54 * 32, 62 * 32));   // on wide raised area cols 54-62
-      enemies.push(createThug(64 * 32, 17 * 32 - 36, 60 * 32, 67 * 32));   // near section end
+      enemies.push(createThug(10 * TILE, 17 * TILE - 72, 1 * TILE, 12 * TILE));    // patrol on ground cols 1-12
+      enemies.push(createThug(25 * TILE, 17 * TILE - 72, 22 * TILE, 29 * TILE));   // patrol on ground cols 22-29
+      enemies.push(createThug(37 * TILE, 15 * TILE - 72, 34 * TILE, 40 * TILE));   // on raised section cols 34-40
+      enemies.push(createThug(57 * TILE, 15 * TILE - 72, 54 * TILE, 62 * TILE));   // on wide raised area cols 54-62
+      enemies.push(createThug(64 * TILE, 17 * TILE - 72, 60 * TILE, 67 * TILE));   // near section end
 
       // --- Place guards in the Border (cols 70-139) ---
-      enemies.push(createGuard(72 * 32, 8 * 32 - 40, 70 * 32, 75 * 32));    // on tall building roof
-      enemies.push(createGuard(82 * 32, 11 * 32 - 40, 80 * 32, 85 * 32));   // on medium building roof
-      enemies.push(createGuard(100 * 32, 10 * 32 - 40, 98 * 32, 103 * 32)); // on building cols 98-103
-      enemies.push(createGuard(116 * 32, 13 * 32 - 40, 113 * 32, 120 * 32)); // on raised terrain
+      enemies.push(createGuard(72 * TILE, 8 * TILE - 80, 70 * TILE, 75 * TILE));    // on tall building roof
+      enemies.push(createGuard(82 * TILE, 11 * TILE - 80, 80 * TILE, 85 * TILE));   // on medium building roof
+      enemies.push(createGuard(100 * TILE, 10 * TILE - 80, 98 * TILE, 103 * TILE)); // on building cols 98-103
+      enemies.push(createGuard(116 * TILE, 13 * TILE - 80, 113 * TILE, 120 * TILE)); // on raised terrain
 
       // --- Dead End Guards (cols 165-195) ---
-      const dg1 = createGuard(168 * 32, 14 * 32 - 40, 165 * 32, 175 * 32);
-      const dg2 = createGuard(175 * 32, 14 * 32 - 40, 170 * 32, 180 * 32);
-      const dg3 = createGuard(182 * 32, 13 * 32 - 40, 178 * 32, 190 * 32);
+      const dg1 = createGuard(168 * TILE, 14 * TILE - 80, 165 * TILE, 175 * TILE);
+      const dg2 = createGuard(175 * TILE, 14 * TILE - 80, 170 * TILE, 180 * TILE);
+      const dg3 = createGuard(182 * TILE, 13 * TILE - 80, 178 * TILE, 190 * TILE);
       enemies.push(dg1);
       enemies.push(dg2);
       enemies.push(dg3);
       deadEndGuards = [dg1, dg2, dg3];
     }
     initEnemies();
+
+    // --- Mistcloak tendril system ---
+    let cloakTime = 0;
+    const CLOAK_TENDRILS = 7; // number of tendril strips
+    const CLOAK_COLORS = ['#2a3a4a', '#3a4a5a', '#3a5a6a', '#4a5a6a', '#2a3a4a', '#3a5a6a', '#4a6d8c'];
+    const CLOAK_ALPHAS = [0.75, 0.7, 0.65, 0.7, 0.75, 0.65, 0.6];
+    const CLOAK_LENGTHS = [44, 40, 50, 36, 46, 38, 42]; // px length per tendril (scaled 2x)
+    const CLOAK_WIDTHS = [5, 4, 6, 4, 5, 4, 5];
+    const CLOAK_PHASES = [0, 0.9, 1.8, 2.7, 3.6, 4.5, 5.4]; // sine phase offsets
+
+    function renderMistcloak(screenX, screenY, facing, vx, vy, dt) {
+      cloakTime += dt;
+      ctx.save();
+
+      // Cloak attaches at upper-mid back (around row 12-14 of sprite)
+      // For facing right: back is on the left side of sprite (x ~ screenX + 5)
+      // For facing left (flipped): back is on the right side
+      const backX = facing === 1 ? screenX + 10 : screenX + player.width - 10;
+      const backY = screenY + 28; // shoulder/upper-back area (scaled 2x)
+
+      // Determine tendril direction based on velocity
+      // When running right, tendrils flow left (and vice versa)
+      // When falling, tendrils float up; when jumping, tendrils billow up
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      const isIdle = Math.abs(vx) < 30 && Math.abs(vy) < 30;
+      const isJumping = vy < -50;
+      const isFalling = vy > 50;
+
+      for (let i = 0; i < CLOAK_TENDRILS; i++) {
+        const len = CLOAK_LENGTHS[i];
+        const phase = CLOAK_PHASES[i];
+        const t = cloakTime * 3 + phase;
+
+        // Base direction: behind the character
+        let dirX, dirY;
+        if (isIdle) {
+          // Tendrils hang down with gentle sway
+          dirX = Math.sin(t * 0.8) * 3 * -facing;
+          dirY = len * 0.9;
+        } else if (isJumping) {
+          // Tendrils billow upward and behind
+          dirX = -facing * (6 + Math.sin(t) * 4);
+          dirY = -(len * 0.5 + Math.sin(t * 1.2 + phase) * 5);
+        } else if (isFalling) {
+          // Tendrils float upward dramatically
+          dirX = -facing * (4 + Math.sin(t * 1.1) * 3);
+          dirY = -(len * 0.7 + Math.sin(t * 0.9 + phase) * 4);
+        } else {
+          // Running: tendrils stream far behind
+          const trailStr = Math.min(Math.abs(vx) / 150, 1);
+          dirX = -facing * (len * 0.8 * trailStr + Math.sin(t) * 3);
+          dirY = len * 0.3 + Math.sin(t * 1.3 + phase) * 4 - trailStr * 4;
+        }
+
+        // Spread tendrils vertically from attach point
+        const attachOffsetY = (i - CLOAK_TENDRILS / 2) * 3;
+        const startX = backX;
+        const startY = backY + attachOffsetY;
+
+        // Control points for bezier curve
+        const midX = startX + dirX * 0.4 + Math.sin(t * 1.5 + phase * 0.7) * 2;
+        const midY = startY + dirY * 0.4 + Math.cos(t * 1.2 + phase) * 2;
+        const endX = startX + dirX + Math.sin(t * 0.7 + phase) * 2;
+        const endY = startY + dirY + Math.cos(t * 0.9 + phase * 1.3) * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.bezierCurveTo(
+          midX, midY,
+          startX + dirX * 0.7, startY + dirY * 0.7,
+          endX, endY
+        );
+        ctx.strokeStyle = CLOAK_COLORS[i];
+        ctx.globalAlpha = CLOAK_ALPHAS[i];
+        ctx.lineWidth = CLOAK_WIDTHS[i];
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
 
     function renderPlayer() {
       const screenX = Math.round(player.x - camera.x);
@@ -3132,6 +3242,10 @@
       if (player.invincible && Math.floor(player.invincibleTimer * 10) % 2 === 0) {
         ctx.globalAlpha = 0.3;
       }
+
+      // Render mistcloak tendrils BEHIND the sprite
+      renderMistcloak(screenX, screenY, player.facing, player.vx, player.vy, 0.016);
+
       drawSprite(spriteData, screenX, screenY, flip);
       ctx.globalAlpha = 1;
 
@@ -3141,7 +3255,7 @@
         const alpha = Math.max(0, 1 - progress * 1.5); // fades out
         const cx = screenX + player.width / 2 + player.facing * (player.width / 2 + 10);
         const cy = screenY + player.height / 2;
-        const radius = 14 + progress * 6;
+        const radius = 28 + progress * 12;
         const startAngle = player.facing === 1 ? -Math.PI * 0.6 : Math.PI * 0.4;
         const endAngle = player.facing === 1 ? Math.PI * 0.6 : Math.PI * 1.6;
 
@@ -3510,49 +3624,82 @@
 
     // --- HUD Rendering ---
     function renderHUD() {
-      // Top-left: Health vials
+      // Top-left: Health vials — narrow glass vials with cork stoppers
       const vialX = 15;
       const vialY = 15;
       for (let i = 0; i < player.maxHp; i++) {
-        const x = vialX + i * 25;
+        const x = vialX + i * 14;
         const y = vialY;
         const full = i < player.hp;
         const draining = (i === player.hp && player.vialDrainAnim > 0);
 
+        // Vial shape: 6px wide, 14px tall body
+        // Thin neck (2px wide, 3px tall) at top, wider base (6px wide, 9px tall)
+        const neckX = x + 2;   // neck left
+        const neckY = y + 2;   // neck top
+        const neckW = 2;
+        const neckH = 3;
+        const bodyX = x;       // body left
+        const bodyY = y + 5;   // body top (below neck)
+        const bodyW = 6;
+        const bodyH = 9;
+
+        // Cork stopper at top
+        ctx.fillStyle = '#8a6a4a';
+        ctx.fillRect(neckX - 0.5, y, neckW + 1, 2);
+        // Cork highlight
+        ctx.fillStyle = '#a08060';
+        ctx.fillRect(neckX, y, 1, 1);
+
         if (full) {
-          // Full vial - bright silver-blue
-          ctx.fillStyle = '#aaccee';
-          ctx.fillRect(x + 2, y + 4, 8, 12);
-          ctx.fillRect(x + 3, y, 6, 5);
-          ctx.fillStyle = '#889';
-          ctx.fillRect(x + 4, y - 1, 4, 2);
-          // Highlight
-          ctx.fillStyle = 'rgba(255,255,255,0.3)';
-          ctx.fillRect(x + 3, y + 5, 2, 8);
+          // Glass neck outline
+          ctx.fillStyle = 'rgba(136,187,238,0.3)';
+          ctx.fillRect(neckX, neckY, neckW, neckH);
+          // Body filled with silver-blue liquid
+          ctx.fillStyle = '#88bbee';
+          ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+          // Liquid shine streak (white highlight on left side)
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.fillRect(bodyX + 1, bodyY + 1, 1, bodyH - 2);
+          // Subtle second highlight
+          ctx.fillStyle = 'rgba(255,255,255,0.2)';
+          ctx.fillRect(bodyX + 2, bodyY + 2, 1, bodyH - 4);
+          // Glass rim at top of body
+          ctx.fillStyle = 'rgba(200,220,240,0.4)';
+          ctx.fillRect(bodyX, bodyY, bodyW, 1);
+          // Glass outline
+          ctx.strokeStyle = 'rgba(100,140,180,0.5)';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(neckX - 0.25, neckY, neckW + 0.5, neckH);
+          ctx.strokeRect(bodyX - 0.25, bodyY, bodyW + 0.5, bodyH);
         } else if (draining) {
           // Draining animation
           const drainPct = player.vialDrainAnim;
-          // Empty outline
-          ctx.strokeStyle = '#333';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 2, y + 4, 8, 12);
-          ctx.strokeRect(x + 3, y, 6, 5);
+          // Glass outline
+          ctx.strokeStyle = 'rgba(60,60,60,0.6)';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(neckX - 0.25, neckY, neckW + 0.5, neckH);
+          ctx.strokeRect(bodyX - 0.25, bodyY, bodyW + 0.5, bodyH);
           // Partial fill from bottom
-          const fillH = Math.floor(12 * drainPct);
-          ctx.fillStyle = '#aaccee';
-          ctx.globalAlpha = 0.7;
-          ctx.fillRect(x + 2, y + 4 + (12 - fillH), 8, fillH);
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = '#889';
-          ctx.fillRect(x + 4, y - 1, 4, 2);
+          const fillH = Math.floor(bodyH * drainPct);
+          if (fillH > 0) {
+            ctx.fillStyle = '#88bbee';
+            ctx.globalAlpha = 0.7;
+            ctx.fillRect(bodyX, bodyY + (bodyH - fillH), bodyW, fillH);
+            // Shine
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillRect(bodyX + 1, bodyY + (bodyH - fillH) + 1, 1, Math.max(0, fillH - 2));
+            ctx.globalAlpha = 1;
+          }
         } else {
-          // Empty vial - dark outline
-          ctx.strokeStyle = '#333';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 2, y + 4, 8, 12);
-          ctx.strokeRect(x + 3, y, 6, 5);
-          ctx.fillStyle = '#333';
-          ctx.fillRect(x + 4, y - 1, 4, 2);
+          // Empty vial - dark glass outline only
+          ctx.strokeStyle = 'rgba(60,60,60,0.6)';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(neckX - 0.25, neckY, neckW + 0.5, neckH);
+          ctx.strokeRect(bodyX - 0.25, bodyY, bodyW + 0.5, bodyH);
+          // Slight glass tint inside
+          ctx.fillStyle = 'rgba(50,50,60,0.15)';
+          ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
         }
       }
 
@@ -4488,12 +4635,12 @@
         rat.vx = 0;
         rat.alpha = 1;
       }
-      rats[0].x = 20 * 32; rats[1].x = 55 * 32; rats[2].x = 100 * 32; rats[3].x = 145 * 32;
+      rats[0].x = 20 * TILE; rats[1].x = 55 * TILE; rats[2].x = 100 * TILE; rats[3].x = 145 * TILE;
     }
 
     // --- Dead End Trigger ---
     function checkDeadEndTrigger() {
-      if (gameState === 'playing' && player.x > 185 * 32) {
+      if (gameState === 'playing' && player.x > 185 * TILE) {
         gameState = 'ending';
         endingPhase = 0;
         endingTimer = 0;
@@ -4621,8 +4768,8 @@
         if (player.deadTimer > 0.5) {
           ctx.save();
           ctx.globalAlpha = Math.min((player.deadTimer - 0.5) / 0.3, 1);
-          ctx.fillStyle = '#8866aa';
-          ctx.font = '24px monospace';
+          ctx.fillStyle = '#e8d0b0';
+          ctx.font = '20px monospace';
           ctx.textAlign = 'center';
           ctx.fillText('The mists claim another...', canvas.width / 2, canvas.height / 2);
           ctx.textAlign = 'left';
