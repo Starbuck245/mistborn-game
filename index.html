@@ -34,34 +34,321 @@
     window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+    // --- Tile Map ---
+    const TILE = 32;
+    const TILE_EMPTY = 0;
+    const TILE_SOLID = 1;
+    const TILE_CRUMBLE = 2;
+    const TILE_TOXIC = 3;
+
+    // Level dimensions: 200 wide x 20 tall
+    const LEVEL_W = 200;
+    const LEVEL_H = 20;
+    const LEVEL_PX_W = LEVEL_W * TILE;
+    const LEVEL_PX_H = LEVEL_H * TILE;
+
+    // Build the level procedurally
+    function buildLevel1() {
+      // Initialize empty
+      const map = [];
+      for (let r = 0; r < LEVEL_H; r++) {
+        map[r] = new Array(LEVEL_W).fill(0);
+      }
+
+      // Helper: fill a column from row rTop to rBot (inclusive) with tile type
+      function fillCol(c, rTop, rBot, type) {
+        if (c < 0 || c >= LEVEL_W) return;
+        for (let r = Math.max(0, rTop); r <= Math.min(LEVEL_H - 1, rBot); r++) {
+          map[r][c] = type;
+        }
+      }
+
+      // Helper: fill rect
+      function fillRect(c1, r1, c2, r2, type) {
+        for (let c = c1; c <= c2; c++) fillCol(c, r1, r2, type);
+      }
+
+      // ========== SECTION 1: THE SLUMS (cols 0-69) ==========
+      // Base ground at row 17-19 (bottom 3 rows)
+      fillRect(0, 17, 69, 19, 1);
+
+      // Starting platform - flat area (cols 0-12)
+      // Already covered by base ground
+
+      // Small raised section (cols 5-8, row 15-16)
+      fillRect(5, 15, 8, 16, 1);
+
+      // Gap in ground (cols 13-15) - pit
+      fillRect(13, 17, 15, 19, 0);
+
+      // Low platform over the gap (col 13-15, row 14)
+      fillRect(13, 14, 15, 14, 2); // crumbling!
+
+      // Raised building (cols 18-24, rows 13-16)
+      fillRect(18, 13, 24, 16, 1);
+
+      // Steps up to building (cols 16-17, rows 15-16)
+      fillRect(16, 15, 17, 16, 1);
+
+      // Toxic puddle on the ground (cols 26-28)
+      fillRect(26, 16, 28, 16, 3);
+
+      // Another gap (cols 30-32)
+      fillRect(30, 17, 32, 19, 0);
+
+      // Floating platform (cols 30-32, row 13)
+      fillRect(30, 13, 32, 13, 1);
+
+      // Raised section (cols 34-40, rows 15-16)
+      fillRect(34, 15, 40, 16, 1);
+
+      // Platform above (cols 36-38, row 11)
+      fillRect(36, 11, 38, 11, 2); // crumbling
+
+      // Ground dip (cols 42-44, deeper ground)
+      fillRect(42, 17, 44, 19, 0);
+      fillRect(42, 18, 44, 19, 1); // shallow pit, only 1 tile deep extra
+
+      // Stacked platforms (cols 46-48)
+      fillRect(46, 14, 48, 14, 1);
+      fillRect(46, 10, 48, 10, 1);
+
+      // Another gap (cols 50-52)
+      fillRect(50, 17, 52, 19, 0);
+
+      // Stepping stones over gap
+      fillRect(50, 15, 50, 15, 1);
+      fillRect(52, 14, 52, 14, 1);
+
+      // Wide raised area (cols 54-62, rows 15-16)
+      fillRect(54, 15, 62, 16, 1);
+
+      // Small building on top (cols 57-60, rows 12-14)
+      fillRect(57, 12, 60, 14, 1);
+
+      // Toxic puddle (cols 64-66)
+      fillRect(64, 16, 66, 16, 3);
+
+      // Transition gap before Border section (cols 68-69)
+      fillRect(68, 17, 69, 19, 0);
+      fillRect(68, 15, 69, 15, 1); // platform to cross
+
+      // ========== SECTION 2: THE BORDER (cols 70-139) ==========
+      // Base ground at row 17-19 but with more gaps
+      fillRect(70, 17, 139, 19, 1);
+
+      // Tall building (cols 70-75, rows 8-16)
+      fillRect(70, 8, 75, 16, 1);
+
+      // Gap (cols 76-79)
+      fillRect(76, 17, 79, 19, 0);
+
+      // Floating platforms to cross gap
+      fillRect(77, 13, 78, 13, 1);
+      fillRect(76, 9, 77, 9, 2); // crumbling
+
+      // Medium building (cols 80-85, rows 11-16)
+      fillRect(80, 11, 85, 16, 1);
+
+      // High platform (cols 82-84, row 7)
+      fillRect(82, 7, 84, 7, 1);
+
+      // Gap (cols 86-89)
+      fillRect(86, 17, 89, 19, 0);
+
+      // Stepping stones going up
+      fillRect(87, 15, 87, 15, 1);
+      fillRect(89, 13, 89, 13, 1);
+
+      // Tall tower (cols 90-93, rows 5-16)
+      fillRect(90, 5, 93, 16, 1);
+
+      // Bridge from tower (cols 94-97, row 8)
+      fillRect(94, 8, 97, 8, 2); // crumbling bridge
+
+      // Building (cols 98-103, rows 10-16)
+      fillRect(98, 10, 103, 16, 1);
+
+      // Toxic area (cols 98-100 on ground level - already solid, put toxic on surface)
+      fillRect(104, 16, 106, 16, 3);
+
+      // Big gap (cols 107-112)
+      fillRect(107, 17, 112, 19, 0);
+
+      // Platforms across big gap
+      fillRect(108, 14, 109, 14, 1);
+      fillRect(111, 12, 112, 12, 2); // crumbling
+
+      // Raised terrain (cols 113-120, rows 13-16)
+      fillRect(113, 13, 120, 16, 1);
+
+      // Upper platforms (cols 115-117, row 9)
+      fillRect(115, 9, 117, 9, 1);
+
+      // Gap (cols 121-123)
+      fillRect(121, 17, 123, 19, 0);
+      fillRect(121, 13, 123, 16, 0);
+
+      // Floating platform
+      fillRect(122, 11, 123, 11, 1);
+
+      // Tall structure (cols 124-130, rows 7-16)
+      fillRect(124, 7, 130, 16, 1);
+
+      // Platforms on top of structure
+      fillRect(126, 4, 128, 4, 1);
+
+      // Gap (cols 131-133)
+      fillRect(131, 17, 133, 19, 0);
+      fillRect(131, 14, 132, 14, 2); // crumbling
+
+      // Transition area (cols 134-139, rows 14-16)
+      fillRect(134, 14, 139, 16, 1);
+
+      // Toxic puddles near border
+      fillRect(136, 13, 138, 13, 3);
+
+      // ========== SECTION 3: THE DEAD END (cols 140-199) ==========
+      // Base ground
+      fillRect(140, 17, 199, 19, 1);
+
+      // Narrow alley - walls close in from top
+      // Left wall column rises (cols 140-142, rows 10-16)
+      fillRect(140, 10, 142, 16, 1);
+
+      // Ground level continues
+      fillRect(143, 15, 150, 16, 1);
+
+      // Ceiling starts coming down (cols 145-199, rows 0-3)
+      fillRect(145, 0, 199, 3, 1);
+
+      // Walls on sides narrow the path
+      // Left walls
+      fillRect(148, 4, 150, 10, 1);
+
+      // Platform in narrow section
+      fillRect(152, 12, 155, 12, 1);
+
+      // More ceiling (cols 155-199, rows 0-5)
+      fillRect(155, 0, 199, 5, 1);
+
+      // Raised ground (cols 156-162, rows 15-16)
+      fillRect(156, 15, 162, 16, 1);
+
+      // Narrow passage walls (cols 160-162, rows 6-12)
+      fillRect(160, 6, 162, 12, 1);
+
+      // Gap (cols 163-164)
+      fillRect(163, 17, 164, 19, 0);
+      fillRect(163, 15, 164, 16, 0);
+
+      // Platform
+      fillRect(163, 13, 164, 13, 2); // crumbling
+
+      // Continuing narrow alley
+      fillRect(165, 14, 175, 16, 1);
+
+      // Ceiling gets lower (cols 168-199, rows 0-7)
+      fillRect(168, 0, 199, 7, 1);
+
+      // Toxic puddles in alley
+      fillRect(170, 13, 172, 13, 3);
+
+      // Walls narrow more
+      fillRect(173, 8, 175, 12, 1);
+
+      // Very narrow section (cols 176-185)
+      fillRect(176, 14, 185, 16, 1);
+      fillRect(176, 8, 178, 11, 1);
+
+      // Even lower ceiling (cols 180-199, rows 0-9)
+      fillRect(180, 0, 199, 9, 1);
+
+      // Small platform
+      fillRect(182, 12, 183, 12, 1);
+
+      // Final approach
+      fillRect(186, 13, 195, 16, 1);
+
+      // Dead end wall (cols 196-199, full height)
+      fillRect(196, 0, 199, 19, 1);
+
+      // Toxic puddles near dead end
+      fillRect(192, 12, 194, 12, 3);
+
+      return map;
+    }
+
+    const level = buildLevel1();
+
+    // Check if a tile is solid (for collision)
+    function isSolid(type) {
+      return type === TILE_SOLID || type === TILE_CRUMBLE;
+    }
+
+    // Get tile at pixel position
+    function getTile(px, py) {
+      const c = Math.floor(px / TILE);
+      const r = Math.floor(py / TILE);
+      if (c < 0 || c >= LEVEL_W || r < 0 || r >= LEVEL_H) return 0;
+      return level[r][c];
+    }
+
+    // --- Camera ---
+    const camera = { x: 0, y: 0 };
+
+    function updateCamera() {
+      // Target: player at 1/3 from left
+      const targetX = player.x - canvas.width / 3;
+      // Target: player centered vertically in middle third
+      const targetY = player.y - canvas.height / 2 + player.height / 2;
+
+      // Smooth follow
+      camera.x += (targetX - camera.x) * 0.1;
+      camera.y += (targetY - camera.y) * 0.05; // slower vertical follow
+
+      // Clamp to level bounds
+      camera.x = Math.max(0, Math.min(LEVEL_PX_W - canvas.width, camera.x));
+      camera.y = Math.max(0, Math.min(LEVEL_PX_H - canvas.height, camera.y));
+    }
+
     // --- Player ---
-    const GROUND_Y_OFFSET = 60; // ground plane at canvas.height - this value
+    const SPAWN_X = 64;
+    const SPAWN_Y = 14 * TILE; // above the ground in the starting area
+
     const player = {
-      x: 100, y: 0,
+      x: SPAWN_X, y: SPAWN_Y,
       vx: 0, vy: 0,
       width: 24, height: 36,
       onGround: false,
       jumpHeld: false,
       jumpTime: 0,
-      facing: 1, // 1 = right, -1 = left
+      facing: 1,
       speed: 200,
-      accel: 800,    // horizontal acceleration (px/s^2)
-      decel: 600,    // horizontal deceleration (px/s^2)
+      accel: 800,
+      decel: 600,
       jumpForce: -400,
       gravity: 980,
-      maxJumpTime: 0.2, // seconds of extended jump when holding space
+      maxJumpTime: 0.2,
     };
 
-    function updatePlayer(dt) {
-      const groundY = canvas.height - GROUND_Y_OFFSET;
+    function respawnPlayer() {
+      player.x = SPAWN_X;
+      player.y = SPAWN_Y;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = false;
+      player.jumpHeld = false;
+      player.jumpTime = 0;
+    }
 
+    function updatePlayer(dt) {
       // --- Horizontal movement with acceleration/deceleration ---
       let targetVx = 0;
       if (input.left) targetVx -= player.speed;
       if (input.right) targetVx += player.speed;
 
       if (targetVx !== 0) {
-        // Accelerate toward target
         if (player.vx < targetVx) {
           player.vx = Math.min(player.vx + player.accel * dt, targetVx);
         } else if (player.vx > targetVx) {
@@ -69,7 +356,6 @@
         }
         player.facing = targetVx > 0 ? 1 : -1;
       } else {
-        // Decelerate to stop
         if (player.vx > 0) {
           player.vx = Math.max(player.vx - player.decel * dt, 0);
         } else if (player.vx < 0) {
@@ -80,13 +366,11 @@
       // --- Jump with variable height ---
       if (input.jump) {
         if (player.onGround && !player.jumpHeld) {
-          // Initial jump
           player.vy = player.jumpForce;
           player.onGround = false;
           player.jumpTime = 0;
         }
         if (!player.onGround && player.jumpTime < player.maxJumpTime) {
-          // Extended jump: reduce effective gravity while holding space
           player.vy += player.gravity * 0.4 * dt;
           player.jumpTime += dt;
         } else {
@@ -98,59 +382,187 @@
         player.jumpHeld = false;
       }
 
-      // --- Apply velocity ---
+      // --- Apply horizontal velocity + tile collision ---
       player.x += player.vx * dt;
+      resolveHorizontal();
+
+      // --- Apply vertical velocity + tile collision ---
       player.y += player.vy * dt;
+      resolveVertical();
 
-      // --- Ground collision ---
-      if (player.y + player.height > groundY) {
-        player.y = groundY - player.height;
-        player.vy = 0;
-        player.onGround = true;
-        player.jumpTime = 0;
+      // --- Level bounds (horizontal only) ---
+      if (player.x < 0) { player.x = 0; player.vx = 0; }
+      if (player.x + player.width > LEVEL_PX_W) { player.x = LEVEL_PX_W - player.width; player.vx = 0; }
+
+      // --- Fall off bottom: respawn ---
+      if (player.y > LEVEL_PX_H + 64) {
+        respawnPlayer();
       }
+    }
 
-      // --- Keep player within horizontal bounds ---
-      if (player.x < 0) player.x = 0;
-      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+    function resolveHorizontal() {
+      // Check tiles overlapping the player AABB
+      const left = Math.floor(player.x / TILE);
+      const right = Math.floor((player.x + player.width - 0.01) / TILE);
+      const top = Math.floor(player.y / TILE);
+      const bottom = Math.floor((player.y + player.height - 0.01) / TILE);
+
+      for (let r = top; r <= bottom; r++) {
+        for (let c = left; c <= right; c++) {
+          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
+          if (!isSolid(level[r][c])) continue;
+
+          // Tile AABB
+          const tx = c * TILE;
+          const ty = r * TILE;
+
+          // Resolve overlap
+          if (player.vx > 0) {
+            // Moving right, push left
+            player.x = tx - player.width;
+            player.vx = 0;
+          } else if (player.vx < 0) {
+            // Moving left, push right
+            player.x = tx + TILE;
+            player.vx = 0;
+          }
+          return; // resolved
+        }
+      }
+    }
+
+    function resolveVertical() {
+      const left = Math.floor(player.x / TILE);
+      const right = Math.floor((player.x + player.width - 0.01) / TILE);
+      const top = Math.floor(player.y / TILE);
+      const bottom = Math.floor((player.y + player.height - 0.01) / TILE);
+
+      player.onGround = false;
+
+      for (let r = top; r <= bottom; r++) {
+        for (let c = left; c <= right; c++) {
+          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
+          if (!isSolid(level[r][c])) continue;
+
+          const ty = r * TILE;
+
+          if (player.vy > 0) {
+            // Falling down, land on top
+            player.y = ty - player.height;
+            player.vy = 0;
+            player.onGround = true;
+            player.jumpTime = 0;
+          } else if (player.vy < 0) {
+            // Moving up, bonk head
+            player.y = ty + TILE;
+            player.vy = 0;
+          }
+          return;
+        }
+      }
+    }
+
+    // --- Tile Rendering ---
+    function renderTiles() {
+      // Determine visible tile range (culling)
+      const startCol = Math.max(0, Math.floor(camera.x / TILE));
+      const endCol = Math.min(LEVEL_W - 1, Math.floor((camera.x + canvas.width) / TILE));
+      const startRow = Math.max(0, Math.floor(camera.y / TILE));
+      const endRow = Math.min(LEVEL_H - 1, Math.floor((camera.y + canvas.height) / TILE));
+
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+          const tile = level[r][c];
+          if (tile === TILE_EMPTY) continue;
+
+          const screenX = c * TILE - camera.x;
+          const screenY = r * TILE - camera.y;
+
+          if (tile === TILE_SOLID) {
+            ctx.fillStyle = '#3a3040';
+            ctx.fillRect(screenX, screenY, TILE, TILE);
+            // Lighter top edge for surface look
+            ctx.fillStyle = '#4a4050';
+            ctx.fillRect(screenX, screenY, TILE, 3);
+            // Subtle grid line
+            ctx.strokeStyle = '#2a2030';
+            ctx.strokeRect(screenX, screenY, TILE, TILE);
+          } else if (tile === TILE_CRUMBLE) {
+            ctx.fillStyle = '#4a4050';
+            ctx.fillRect(screenX, screenY, TILE, TILE);
+            // Cracked look - draw some crack lines
+            ctx.strokeStyle = '#5a5060';
+            ctx.beginPath();
+            ctx.moveTo(screenX + 4, screenY + 8);
+            ctx.lineTo(screenX + 16, screenY + 16);
+            ctx.lineTo(screenX + 28, screenY + 10);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(screenX + 10, screenY + 22);
+            ctx.lineTo(screenX + 20, screenY + 28);
+            ctx.stroke();
+            // Top edge
+            ctx.fillStyle = '#5a5565';
+            ctx.fillRect(screenX, screenY, TILE, 2);
+          } else if (tile === TILE_TOXIC) {
+            // Draw ground underneath
+            ctx.fillStyle = '#3a3040';
+            ctx.fillRect(screenX, screenY, TILE, TILE);
+            // Greenish toxic overlay
+            ctx.fillStyle = 'rgba(42, 74, 42, 0.7)';
+            ctx.fillRect(screenX, screenY, TILE, TILE);
+            // Bubbling effect - small circles
+            ctx.fillStyle = '#3a6a3a';
+            ctx.beginPath();
+            ctx.arc(screenX + 8, screenY + 10, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 22, screenY + 14, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(screenX + 14, screenY + 22, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
     }
 
     function renderPlayer() {
-      const groundY = canvas.height - GROUND_Y_OFFSET;
-
-      // Draw temporary ground plane
-      ctx.fillStyle = '#2a2a3a';
-      ctx.fillRect(0, groundY, canvas.width, GROUND_Y_OFFSET);
+      const screenX = player.x - camera.x;
+      const screenY = player.y - camera.y;
 
       // Draw player as colored rectangle (Vin's cloak color)
       ctx.fillStyle = '#4a6d8c';
-      ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillRect(screenX, screenY, player.width, player.height);
     }
 
-    // Initialize player position on ground
-    player.y = 0; // will be corrected on first frame
+    // Initialize camera to player start
+    camera.x = Math.max(0, player.x - canvas.width / 3);
+    camera.y = Math.max(0, player.y - canvas.height / 2);
 
     let lastTime = 0;
     function gameLoop(timestamp) {
       const dt = (timestamp - lastTime) / 1000;
       lastTime = timestamp;
-
-      // Clamp dt to avoid spiral of death on first frame or tab-switch
       const safeDt = Math.min(dt, 0.1);
+
+      // Update
+      updatePlayer(safeDt);
+      updateCamera();
 
       // Clear
       ctx.fillStyle = '#1a1a2e';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // FPS debug (skip display on first frame where dt is unreliable)
+      // Render tiles and player
+      renderTiles();
+      renderPlayer();
+
+      // HUD (not affected by camera)
       ctx.fillStyle = '#666';
       ctx.font = '12px monospace';
       const fps = safeDt > 0 ? Math.round(1 / safeDt) : '--';
       ctx.fillText(`FPS: ${fps}`, 10, 20);
-
-      // Update and render player
-      updatePlayer(safeDt);
-      renderPlayer();
 
       // Input debug display
       const inputNames = ['left', 'right', 'jump', 'attack', 'luck'];
