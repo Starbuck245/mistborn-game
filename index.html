@@ -34,6 +34,102 @@
     window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+    // --- Player ---
+    const GROUND_Y_OFFSET = 60; // ground plane at canvas.height - this value
+    const player = {
+      x: 100, y: 0,
+      vx: 0, vy: 0,
+      width: 24, height: 36,
+      onGround: false,
+      jumpHeld: false,
+      jumpTime: 0,
+      facing: 1, // 1 = right, -1 = left
+      speed: 200,
+      accel: 800,    // horizontal acceleration (px/s^2)
+      decel: 600,    // horizontal deceleration (px/s^2)
+      jumpForce: -400,
+      gravity: 980,
+      maxJumpTime: 0.2, // seconds of extended jump when holding space
+    };
+
+    function updatePlayer(dt) {
+      const groundY = canvas.height - GROUND_Y_OFFSET;
+
+      // --- Horizontal movement with acceleration/deceleration ---
+      let targetVx = 0;
+      if (input.left) targetVx -= player.speed;
+      if (input.right) targetVx += player.speed;
+
+      if (targetVx !== 0) {
+        // Accelerate toward target
+        if (player.vx < targetVx) {
+          player.vx = Math.min(player.vx + player.accel * dt, targetVx);
+        } else if (player.vx > targetVx) {
+          player.vx = Math.max(player.vx - player.accel * dt, targetVx);
+        }
+        player.facing = targetVx > 0 ? 1 : -1;
+      } else {
+        // Decelerate to stop
+        if (player.vx > 0) {
+          player.vx = Math.max(player.vx - player.decel * dt, 0);
+        } else if (player.vx < 0) {
+          player.vx = Math.min(player.vx + player.decel * dt, 0);
+        }
+      }
+
+      // --- Jump with variable height ---
+      if (input.jump) {
+        if (player.onGround && !player.jumpHeld) {
+          // Initial jump
+          player.vy = player.jumpForce;
+          player.onGround = false;
+          player.jumpTime = 0;
+        }
+        if (!player.onGround && player.jumpTime < player.maxJumpTime) {
+          // Extended jump: reduce effective gravity while holding space
+          player.vy += player.gravity * 0.4 * dt;
+          player.jumpTime += dt;
+        } else {
+          player.vy += player.gravity * dt;
+        }
+        player.jumpHeld = true;
+      } else {
+        player.vy += player.gravity * dt;
+        player.jumpHeld = false;
+      }
+
+      // --- Apply velocity ---
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+
+      // --- Ground collision ---
+      if (player.y + player.height > groundY) {
+        player.y = groundY - player.height;
+        player.vy = 0;
+        player.onGround = true;
+        player.jumpTime = 0;
+      }
+
+      // --- Keep player within horizontal bounds ---
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+    }
+
+    function renderPlayer() {
+      const groundY = canvas.height - GROUND_Y_OFFSET;
+
+      // Draw temporary ground plane
+      ctx.fillStyle = '#2a2a3a';
+      ctx.fillRect(0, groundY, canvas.width, GROUND_Y_OFFSET);
+
+      // Draw player as colored rectangle (Vin's cloak color)
+      ctx.fillStyle = '#4a6d8c';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    // Initialize player position on ground
+    player.y = 0; // will be corrected on first frame
+
     let lastTime = 0;
     function gameLoop(timestamp) {
       const dt = (timestamp - lastTime) / 1000;
@@ -51,6 +147,10 @@
       ctx.font = '12px monospace';
       const fps = safeDt > 0 ? Math.round(1 / safeDt) : '--';
       ctx.fillText(`FPS: ${fps}`, 10, 20);
+
+      // Update and render player
+      updatePlayer(safeDt);
+      renderPlayer();
 
       // Input debug display
       const inputNames = ['left', 'right', 'jump', 'attack', 'luck'];
