@@ -56,6 +56,18 @@
     window.addEventListener('click', () => { initAudio(); });
     window.addEventListener('touchstart', () => { initAudio(); }, { once: true });
 
+    // --- Tile Map Constants (declared early, used throughout) ---
+    const TILE = 48;
+    const SPRITE_SCALE = 2;
+    const TILE_EMPTY = 0;
+    const TILE_SOLID = 1;
+    const TILE_CRUMBLE = 2;
+    const TILE_TOXIC = 3;
+    const LEVEL_W = 200;
+    const LEVEL_H = 20;
+    const LEVEL_PX_W = LEVEL_W * TILE;
+    const LEVEL_PX_H = LEVEL_H * TILE;
+
     // --- Mobile Touch Controls ---
     if ('ontouchstart' in window) {
       document.getElementById('touch-controls').style.display = 'block';
@@ -763,18 +775,7 @@
     window.addEventListener('touchstart', () => { anyKeyFlag = true; });
 
     // --- Tile Map ---
-    const TILE = 48;
-    const SPRITE_SCALE = 2;
-    const TILE_EMPTY = 0;
-    const TILE_SOLID = 1;
-    const TILE_CRUMBLE = 2;
-    const TILE_TOXIC = 3;
-
-    // Level dimensions: 200 wide x 20 tall
-    const LEVEL_W = 200;
-    const LEVEL_H = 20;
-    const LEVEL_PX_W = LEVEL_W * TILE;
-    const LEVEL_PX_H = LEVEL_H * TILE;
+    // (Constants declared earlier in the file)
 
     // Build the level procedurally
     function buildLevel1() {
