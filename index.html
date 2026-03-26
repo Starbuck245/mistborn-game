@@ -536,6 +536,346 @@
       ctx.fillRect(screenX, screenY, player.width, player.height);
     }
 
+    // --- Parallax Background ---
+    // Generate procedural background element positions (seeded once)
+    const bgElements = {
+      // Far layer: Kredik Shaw spires + smokestacks
+      farSpires: [],
+      farStacks: [],
+      // Mid layer: skaa shack rooftops
+      midRoofs: [],
+      midWindows: [],
+      midSteam: [],
+      // Near layer: fence posts, barrels, crates
+      nearFences: [],
+      nearBarrels: [],
+      nearCrates: [],
+    };
+
+    // Repeating tile width for each layer (in virtual pixels)
+    const BG_FAR_W = 1200;
+    const BG_MID_W = 900;
+    const BG_NEAR_W = 700;
+
+    function seedRandom(seed) {
+      let s = seed;
+      return function() {
+        s = (s * 16807 + 0) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+    }
+
+    (function generateBgElements() {
+      const rng = seedRandom(42);
+
+      // Far layer: Kredik Shaw - a big central spiky palace + flanking spires
+      // Main palace body
+      bgElements.farSpires.push({ x: 300, w: 200, h: 280, spikes: 7 });
+      // Flanking spires
+      for (let i = 0; i < 5; i++) {
+        bgElements.farSpires.push({
+          x: rng() * BG_FAR_W,
+          w: 15 + rng() * 30,
+          h: 80 + rng() * 180,
+          spikes: 1 + Math.floor(rng() * 3),
+        });
+      }
+      // Smokestacks
+      for (let i = 0; i < 3; i++) {
+        bgElements.farStacks.push({
+          x: rng() * BG_FAR_W,
+          w: 12 + rng() * 10,
+          h: 100 + rng() * 120,
+        });
+      }
+
+      // Mid layer: skaa rooftops
+      for (let i = 0; i < 12; i++) {
+        const rx = rng() * BG_MID_W;
+        const rw = 40 + rng() * 80;
+        const rh = 25 + rng() * 40;
+        bgElements.midRoofs.push({ x: rx, w: rw, h: rh, peaked: rng() > 0.5 });
+        // Some roofs have lit windows
+        if (rng() > 0.4) {
+          const wx = rx + 8 + rng() * (rw - 20);
+          const wy = rh - 10 - rng() * 10;
+          bgElements.midWindows.push({ x: wx, y: wy, w: 5 + rng() * 6, h: 5 + rng() * 5, flicker: rng() * 6.28 });
+        }
+      }
+      // Steam wisps
+      for (let i = 0; i < 5; i++) {
+        bgElements.midSteam.push({ x: rng() * BG_MID_W, phase: rng() * 6.28 });
+      }
+
+      // Near layer: fence posts, barrels, crates
+      for (let i = 0; i < 15; i++) {
+        bgElements.nearFences.push({ x: i * (BG_NEAR_W / 15) + rng() * 20 });
+      }
+      for (let i = 0; i < 6; i++) {
+        bgElements.nearBarrels.push({ x: rng() * BG_NEAR_W, r: 8 + rng() * 6 });
+      }
+      for (let i = 0; i < 5; i++) {
+        bgElements.nearCrates.push({ x: rng() * BG_NEAR_W, s: 12 + rng() * 14 });
+      }
+    })();
+
+    let bgTime = 0;
+
+    function renderBackground(dt) {
+      bgTime += dt;
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Sky gradient (replaces flat clear)
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+      skyGrad.addColorStop(0, '#2a1520');
+      skyGrad.addColorStop(0.3, '#3a2028');
+      skyGrad.addColorStop(0.6, '#1e1520');
+      skyGrad.addColorStop(1, '#12101a');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // --- Far layer (0.1x camera speed) ---
+      const farOffX = -(camera.x * 0.1) % BG_FAR_W;
+      const groundBase = H * 0.75; // background ground line
+
+      ctx.save();
+      // Draw two tiles for seamless wrapping
+      for (let t = -1; t <= Math.ceil(W / BG_FAR_W) + 1; t++) {
+        const ox = farOffX + t * BG_FAR_W;
+
+        // Kredik Shaw spires
+        bgElements.farSpires.forEach(sp => {
+          const sx = ox + sp.x;
+          if (sx + sp.w < -50 || sx > W + 50) return;
+          const baseY = groundBase - 20;
+
+          ctx.fillStyle = '#1a0f1a';
+          // Main body
+          ctx.fillRect(sx, baseY - sp.h * 0.4, sp.w, sp.h * 0.4);
+
+          // Spikes on top
+          for (let s = 0; s < sp.spikes; s++) {
+            const spikeX = sx + (sp.w / (sp.spikes + 1)) * (s + 1);
+            const spikeH = sp.h * (0.4 + Math.random() * 0.2);
+            ctx.beginPath();
+            ctx.moveTo(spikeX - 6, baseY - sp.h * 0.4);
+            ctx.lineTo(spikeX, baseY - spikeH);
+            ctx.lineTo(spikeX + 6, baseY - sp.h * 0.4);
+            ctx.fill();
+          }
+        });
+
+        // Smokestacks
+        bgElements.farStacks.forEach(st => {
+          const sx = ox + st.x;
+          if (sx + st.w < -20 || sx > W + 20) return;
+          const baseY = groundBase - 20;
+
+          ctx.fillStyle = '#1a0f1a';
+          ctx.fillRect(sx, baseY - st.h, st.w, st.h);
+
+          // Orange glow at top
+          const glow = ctx.createRadialGradient(sx + st.w / 2, baseY - st.h, 2, sx + st.w / 2, baseY - st.h, 15 + Math.sin(bgTime * 2 + st.x) * 5);
+          glow.addColorStop(0, 'rgba(255, 120, 40, 0.6)');
+          glow.addColorStop(1, 'rgba(255, 80, 20, 0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(sx + st.w / 2, baseY - st.h, 18, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+
+      // --- Mid layer (0.3x camera speed) ---
+      const midOffX = -(camera.x * 0.3) % BG_MID_W;
+      const midBase = H * 0.82;
+
+      ctx.save();
+      for (let t = -1; t <= Math.ceil(W / BG_MID_W) + 1; t++) {
+        const ox = midOffX + t * BG_MID_W;
+
+        // Rooftops
+        bgElements.midRoofs.forEach(rf => {
+          const rx = ox + rf.x;
+          if (rx + rf.w < -20 || rx > W + 20) return;
+          const ry = midBase;
+
+          ctx.fillStyle = '#221a25';
+          if (rf.peaked) {
+            // Peaked roof
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(rx + rf.w / 2, ry - rf.h);
+            ctx.lineTo(rx + rf.w, ry);
+            ctx.closePath();
+            ctx.fill();
+            // Wall below
+            ctx.fillRect(rx + 5, ry, rf.w - 10, 30);
+          } else {
+            // Flat roof building
+            ctx.fillRect(rx, ry - rf.h, rf.w, rf.h + 30);
+          }
+        });
+
+        // Lit windows
+        bgElements.midWindows.forEach(win => {
+          const wx = ox + win.x;
+          if (wx < -20 || wx > W + 20) return;
+          const wy = midBase - win.y;
+
+          // Flicker
+          const brightness = 0.6 + 0.4 * Math.sin(bgTime * 3 + win.flicker);
+          const alpha = 0.4 + brightness * 0.5;
+          ctx.fillStyle = `rgba(255, 180, 60, ${alpha})`;
+          ctx.fillRect(wx, wy, win.w, win.h);
+
+          // Glow around window
+          ctx.fillStyle = `rgba(255, 150, 40, ${alpha * 0.2})`;
+          ctx.fillRect(wx - 3, wy - 3, win.w + 6, win.h + 6);
+        });
+
+        // Steam wisps
+        bgElements.midSteam.forEach(st => {
+          const sx = ox + st.x;
+          if (sx < -30 || sx > W + 30) return;
+
+          ctx.strokeStyle = 'rgba(150, 140, 160, 0.15)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          for (let i = 0; i < 30; i++) {
+            const py = midBase - 40 - i * 3;
+            const px = sx + Math.sin(bgTime * 0.8 + st.phase + i * 0.3) * 12;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        });
+      }
+      ctx.restore();
+
+      // --- Near layer (0.6x camera speed) ---
+      const nearOffX = -(camera.x * 0.6) % BG_NEAR_W;
+      const nearBase = H * 0.88;
+
+      ctx.save();
+      for (let t = -1; t <= Math.ceil(W / BG_NEAR_W) + 1; t++) {
+        const ox = nearOffX + t * BG_NEAR_W;
+
+        // Fence posts
+        ctx.fillStyle = '#0f0a12';
+        bgElements.nearFences.forEach(fp => {
+          const fx = ox + fp.x;
+          if (fx < -10 || fx > W + 10) return;
+          ctx.fillRect(fx, nearBase - 30, 3, 35);
+        });
+
+        // Fence rail connecting posts
+        ctx.strokeStyle = '#0f0a12';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ox, nearBase - 18);
+        ctx.lineTo(ox + BG_NEAR_W, nearBase - 18);
+        ctx.stroke();
+
+        // Barrels
+        bgElements.nearBarrels.forEach(br => {
+          const bx = ox + br.x;
+          if (bx < -20 || bx > W + 20) return;
+          ctx.fillStyle = '#0d0810';
+          ctx.beginPath();
+          ctx.ellipse(bx, nearBase - br.r, br.r, br.r * 1.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Rim highlight
+          ctx.strokeStyle = '#1a1220';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(bx, nearBase - br.r, br.r, br.r * 0.4, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        // Crates
+        bgElements.nearCrates.forEach(cr => {
+          const cx = ox + cr.x;
+          if (cx < -20 || cx > W + 20) return;
+          ctx.fillStyle = '#0d0810';
+          ctx.fillRect(cx, nearBase - cr.s, cr.s, cr.s);
+          // Cross detail
+          ctx.strokeStyle = '#1a1220';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx, nearBase - cr.s);
+          ctx.lineTo(cx + cr.s, nearBase);
+          ctx.moveTo(cx + cr.s, nearBase - cr.s);
+          ctx.lineTo(cx, nearBase);
+          ctx.stroke();
+        });
+      }
+      ctx.restore();
+    }
+
+    // --- Ash Particle System ---
+    const ASH_COUNT = 80;
+    const EMBER_COUNT = 10;
+    const particles = [];
+
+    function initParticles() {
+      for (let i = 0; i < ASH_COUNT + EMBER_COUNT; i++) {
+        particles.push(createParticle(i >= ASH_COUNT, true));
+      }
+    }
+
+    function createParticle(isEmber, randomY) {
+      const colors = isEmber
+        ? ['#ff6633', '#ff4422', '#ff5533', '#ee4411']
+        : ['#999', '#aaa', '#bbb', '#777', '#888'];
+      return {
+        x: Math.random() * canvas.width,
+        y: randomY ? Math.random() * canvas.height : -Math.random() * 20,
+        speed: isEmber ? (25 + Math.random() * 40) : (20 + Math.random() * 40),
+        size: isEmber ? (2 + Math.random() * 2) : (1 + Math.random() * 2),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        wobblePhase: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.5 + Math.random() * 1.5,
+        wobbleAmp: 10 + Math.random() * 25,
+        drift: (Math.random() - 0.5) * 15,
+        isEmber: isEmber,
+        alpha: isEmber ? (0.7 + Math.random() * 0.3) : (0.3 + Math.random() * 0.5),
+      };
+    }
+
+    function updateParticles(dt) {
+      const W = canvas.width;
+      const H = canvas.height;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.y += p.speed * dt;
+        p.x += (Math.sin(bgTime * p.wobbleSpeed + p.wobblePhase) * p.wobbleAmp * dt) + p.drift * dt;
+
+        // Wrap around screen edges
+        if (p.y > H + 10) {
+          p.y = -10;
+          p.x = Math.random() * W;
+        }
+        if (p.x < -10) p.x = W + 10;
+        if (p.x > W + 10) p.x = -10;
+      }
+    }
+
+    function renderParticles() {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    initParticles();
+
     // Initialize camera to player start
     camera.x = Math.max(0, player.x - canvas.width / 3);
     camera.y = Math.max(0, player.y - canvas.height / 2);
@@ -550,13 +890,16 @@
       updatePlayer(safeDt);
       updateCamera();
 
-      // Clear
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear + background (sky gradient replaces flat clear)
+      renderBackground(safeDt);
 
       // Render tiles and player
       renderTiles();
       renderPlayer();
+
+      // Ash particles (screen-space, in front of everything except HUD)
+      updateParticles(safeDt);
+      renderParticles();
 
       // HUD (not affected by camera)
       ctx.fillStyle = '#666';
