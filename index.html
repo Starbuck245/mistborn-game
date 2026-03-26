@@ -330,6 +330,12 @@
       jumpForce: -400,
       gravity: 980,
       maxJumpTime: 0.2,
+      // Attack state
+      attacking: false,
+      attackTimer: 0,
+      attackDuration: 0.3,
+      attackHitbox: { x: 0, y: 0, width: 20, height: 20 },
+      attackTriggered: false,
     };
 
     function respawnPlayer() {
@@ -398,6 +404,28 @@
       if (player.y > LEVEL_PX_H + 64) {
         respawnPlayer();
       }
+
+      // --- Knife attack ---
+      if (input.attack && !player.attacking && !player.attackTriggered) {
+        player.attacking = true;
+        player.attackTimer = 0;
+        player.attackTriggered = true;
+      }
+      if (player.attacking) {
+        player.attackTimer += dt;
+        if (player.attackTimer >= player.attackDuration) {
+          player.attacking = false;
+        }
+      }
+      if (!input.attack) {
+        player.attackTriggered = false;
+      }
+      // Update attack hitbox position
+      const hbOffsetX = player.facing === 1 ? player.width : -20;
+      player.attackHitbox.x = player.x + hbOffsetX;
+      player.attackHitbox.y = player.y + (player.height / 2) - 10;
+      player.attackHitbox.width = 20;
+      player.attackHitbox.height = 20;
     }
 
     function resolveHorizontal() {
@@ -893,24 +921,25 @@
       // Determine desired state
       let desiredState = 'idle';
 
-      if (anim.attackPlaying) {
+      if (player.attacking) {
         desiredState = 'attack';
-        anim.attackTimer -= dt;
-        if (anim.attackTimer <= 0) {
-          anim.attackPlaying = false;
+        if (!anim.attackPlaying) {
+          anim.attackPlaying = true;
+          anim.frame = 0;
+          anim.timer = 0;
         }
-      } else if (input.attack && !anim.attackPlaying) {
-        anim.attackPlaying = true;
-        anim.attackTimer = anim.frameTimes.attack * SPRITE_FRAMES.attack.length;
-        desiredState = 'attack';
-        anim.frame = 0;
-        anim.timer = 0;
-      } else if (!player.onGround && player.vy < 0) {
-        desiredState = 'jump';
-      } else if (!player.onGround && player.vy >= 0) {
-        desiredState = 'fall';
-      } else if (Math.abs(player.vx) > 10) {
-        desiredState = 'run';
+      } else {
+        anim.attackPlaying = false;
+      }
+
+      if (desiredState !== 'attack') {
+        if (!player.onGround && player.vy < 0) {
+          desiredState = 'jump';
+        } else if (!player.onGround && player.vy >= 0) {
+          desiredState = 'fall';
+        } else if (Math.abs(player.vx) > 10) {
+          desiredState = 'run';
+        }
       }
 
       // State change resets frame
@@ -959,6 +988,34 @@
       const spriteData = frames[anim.frame % frames.length];
       const flip = player.facing === -1;
       drawSprite(spriteData, screenX, screenY, flip);
+
+      // --- Knife slash visual effect ---
+      if (player.attacking) {
+        const progress = player.attackTimer / player.attackDuration; // 0 to 1
+        const alpha = Math.max(0, 1 - progress * 1.5); // fades out
+        const cx = screenX + player.width / 2 + player.facing * (player.width / 2 + 10);
+        const cy = screenY + player.height / 2;
+        const radius = 14 + progress * 6;
+        const startAngle = player.facing === 1 ? -Math.PI * 0.6 : Math.PI * 0.4;
+        const endAngle = player.facing === 1 ? Math.PI * 0.6 : Math.PI * 1.6;
+
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.7;
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.stroke();
+
+        // Inner brighter arc
+        ctx.globalAlpha = alpha * 0.4;
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.6, startAngle, endAngle);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     // --- Parallax Background ---
