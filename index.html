@@ -34,6 +34,50 @@
     window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+    // --- Game State System ---
+    let gameState = 'opening'; // 'opening', 'playing', 'ending', 'complete'
+
+    // --- Opening Cutscene ---
+    const openingLines = [
+      "The ash falls. It always falls.",
+      "Vin pulled her cloak tighter and kept to the shadows.",
+      "The streets of Luthadel were no place for a girl alone.",
+      "But she had nowhere else to go."
+    ];
+    const openingPauses = [0.8, 0.8, 1.0, 0]; // pause after each line
+    let openingTimer = 0;
+    let openingFadeIn = 0; // 0-1 fade from black
+    let openingLineIndex = 0;
+    let openingCharIndex = 0;
+    let openingCharTimer = 0;
+    let openingPauseTimer = 0;
+    let openingDone = false;
+    let openingBlinkTimer = 0;
+    let openingDisplayedLines = [];
+    let openingFadeOut = 0;
+    let openingFadingOut = false;
+    let openingAnyKeyReady = false;
+    let openingAnyKeyPressed = false;
+
+    // --- Ending Cutscene ---
+    let endingPhase = 0; // phases of the ending sequence
+    let endingTimer = 0;
+    let endingText = '';
+    let endingCharIndex = 0;
+    let endingCharTimer = 0;
+    let endingPauseTimer = 0;
+    let endingDisplayedText = '';
+    let endingVignetteAlpha = 0;
+    let endingPulseTimer = 0;
+    let endingCameraPanTarget = 0;
+    let endingFadeAlpha = 0;
+    let endingGuardsCleared = false;
+    let deadEndGuards = []; // references to the 3 guards in the Dead End
+
+    // Listener for "any key" during cutscenes
+    let anyKeyFlag = false;
+    window.addEventListener('keydown', () => { anyKeyFlag = true; });
+
     // --- Tile Map ---
     const TILE = 32;
     const TILE_EMPTY = 0;
@@ -2276,6 +2320,16 @@
     enemies.push(createGuard(100 * 32, 10 * 32 - 40, 98 * 32, 103 * 32)); // on building cols 98-103
     enemies.push(createGuard(116 * 32, 13 * 32 - 40, 113 * 32, 120 * 32)); // on raised terrain
 
+    // --- Dead End Guards (cols 165-195) ---
+    // These guards corner the player in the dead end
+    const deadEndGuard1 = createGuard(168 * 32, 14 * 32 - 40, 165 * 32, 175 * 32);
+    const deadEndGuard2 = createGuard(175 * 32, 14 * 32 - 40, 170 * 32, 180 * 32);
+    const deadEndGuard3 = createGuard(182 * 32, 13 * 32 - 40, 178 * 32, 190 * 32);
+    enemies.push(deadEndGuard1);
+    enemies.push(deadEndGuard2);
+    enemies.push(deadEndGuard3);
+    deadEndGuards = [deadEndGuard1, deadEndGuard2, deadEndGuard3];
+
     function renderPlayer() {
       const screenX = Math.round(player.x - camera.x);
       const screenY = Math.round(player.y - camera.y);
@@ -2760,27 +2814,553 @@
       ctx.strokeRect(barX, barY, barW, barH);
     }
 
+    // --- Typewriter Helper ---
+    function typewriterUpdate(text, charIndex, charTimer, dt, speed) {
+      charTimer += dt;
+      while (charTimer >= speed && charIndex < text.length) {
+        charTimer -= speed;
+        charIndex++;
+      }
+      return { charIndex, charTimer };
+    }
+
+    // --- Opening Cutscene ---
+    function updateOpening(dt) {
+      openingTimer += dt;
+
+      // Fade in over first second
+      if (openingFadeIn < 1) {
+        openingFadeIn = Math.min(1, openingFadeIn + dt);
+      }
+
+      // Fading out after key press
+      if (openingFadingOut) {
+        openingFadeOut += dt * 2; // fade to black in 0.5s
+        if (openingFadeOut >= 1.5) {
+          gameState = 'playing';
+          openingFadingOut = false;
+        }
+        return;
+      }
+
+      // Any key to begin
+      if (openingDone) {
+        openingBlinkTimer += dt;
+        if (anyKeyFlag && openingAnyKeyReady) {
+          openingFadingOut = true;
+          openingFadeOut = 0;
+          anyKeyFlag = false;
+        }
+        if (!openingAnyKeyReady && openingTimer > 1) {
+          openingAnyKeyReady = true;
+          anyKeyFlag = false; // reset so they need a fresh press
+        }
+        return;
+      }
+
+      // Pause between lines
+      if (openingPauseTimer > 0) {
+        openingPauseTimer -= dt;
+        if (openingPauseTimer <= 0) {
+          openingLineIndex++;
+          openingCharIndex = 0;
+          openingCharTimer = 0;
+          if (openingLineIndex >= openingLines.length) {
+            openingDone = true;
+            openingTimer = 0;
+          }
+        }
+        return;
+      }
+
+      // Typewriter current line
+      if (openingLineIndex < openingLines.length) {
+        const line = openingLines[openingLineIndex];
+        const tw = typewriterUpdate(line, openingCharIndex, openingCharTimer, dt, 0.04);
+        openingCharIndex = tw.charIndex;
+        openingCharTimer = tw.charTimer;
+
+        // Build displayed lines
+        openingDisplayedLines[openingLineIndex] = line.substring(0, openingCharIndex);
+
+        // Line done? start pause
+        if (openingCharIndex >= line.length) {
+          openingPauseTimer = openingPauses[openingLineIndex] || 0.5;
+        }
+      }
+    }
+
+    function renderOpening() {
+      // Black background
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw text
+      ctx.save();
+      ctx.globalAlpha = openingFadeIn;
+      ctx.fillStyle = '#e8e0d0';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+
+      const lineHeight = 28;
+      const startY = canvas.height / 2 - (openingLines.length * lineHeight) / 2;
+
+      for (let i = 0; i <= openingLineIndex && i < openingLines.length; i++) {
+        const text = openingDisplayedLines[i] || '';
+        if (text) {
+          ctx.fillText(text, canvas.width / 2, startY + i * lineHeight);
+        }
+      }
+
+      // "Press any key" blinking
+      if (openingDone && openingAnyKeyReady) {
+        const blink = Math.sin(openingBlinkTimer * 3) > 0;
+        if (blink) {
+          ctx.globalAlpha = 0.7;
+          ctx.font = '14px monospace';
+          ctx.fillText('Press any key to begin', canvas.width / 2, startY + openingLines.length * lineHeight + 40);
+        }
+      }
+
+      ctx.restore();
+
+      // Fade out overlay
+      if (openingFadingOut) {
+        const alpha = Math.min(openingFadeOut, 1);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+    }
+
+    // --- Ending Cutscene ---
+    const endingTexts = [
+      "There was nowhere left to run.",
+      "She didn't understand what she'd done. Only that it worked.",
+      "Someone was watching."
+    ];
+
+    function updateEnding(dt) {
+      endingTimer += dt;
+
+      switch (endingPhase) {
+        case 0: // Vignette darkens, first text
+          endingVignetteAlpha = Math.min(0.6, endingVignetteAlpha + dt * 0.5);
+          if (!endingDisplayedText && endingTimer > 0.5) {
+            endingText = endingTexts[0];
+            endingCharIndex = 0;
+            endingCharTimer = 0;
+            endingDisplayedText = ' '; // mark started
+          }
+          if (endingText) {
+            const tw = typewriterUpdate(endingText, endingCharIndex, endingCharTimer, dt, 0.04);
+            endingCharIndex = tw.charIndex;
+            endingCharTimer = tw.charTimer;
+            endingDisplayedText = endingText.substring(0, endingCharIndex);
+            if (endingCharIndex >= endingText.length && endingTimer > 3) {
+              endingPhase = 1;
+              endingTimer = 0;
+            }
+          }
+          break;
+
+        case 1: // Luck pulse + guards flee
+          endingPulseTimer += dt;
+          // Create a big pulse effect at start
+          if (endingTimer < 0.1) {
+            effects.push({
+              type: 'luckPulse',
+              x: player.x + player.width / 2,
+              y: player.y + player.height / 2,
+              radius: 0,
+              maxRadius: 300,
+              timer: 0,
+              duration: 1.5,
+            });
+          }
+          // Make guards wander away
+          if (!endingGuardsCleared) {
+            for (const g of deadEndGuards) {
+              if (g.alive) {
+                g.soothed = true;
+                g.sootheTimer = 999;
+                g.detecting = false;
+                g.facing = -1; // face left (away from dead end)
+                g.x -= 80 * dt; // move them offscreen to the left
+              }
+            }
+            if (endingTimer > 3) {
+              endingGuardsCleared = true;
+              // Remove them
+              for (const g of deadEndGuards) {
+                g.alive = false;
+                g.deathTimer = 999;
+              }
+            }
+          }
+          if (endingTimer > 3.5) {
+            endingPhase = 2;
+            endingTimer = 0;
+            endingText = endingTexts[1];
+            endingCharIndex = 0;
+            endingCharTimer = 0;
+            endingDisplayedText = '';
+          }
+          break;
+
+        case 2: // Second text
+          {
+            const tw = typewriterUpdate(endingText, endingCharIndex, endingCharTimer, dt, 0.04);
+            endingCharIndex = tw.charIndex;
+            endingCharTimer = tw.charTimer;
+            endingDisplayedText = endingText.substring(0, endingCharIndex);
+            if (endingCharIndex >= endingText.length && endingTimer > 3) {
+              endingPhase = 3;
+              endingTimer = 0;
+              endingDisplayedText = '';
+              // Store target for camera pan up
+              endingCameraPanTarget = camera.y - 200;
+            }
+          }
+          break;
+
+        case 3: // Camera pans up to rooftop
+          {
+            const panDuration = 2;
+            const t = Math.min(endingTimer / panDuration, 1);
+            const eased = t * t * (3 - 2 * t); // smoothstep
+            camera.y = camera.y + (endingCameraPanTarget - camera.y) * 0.03;
+            if (endingTimer > panDuration) {
+              endingPhase = 4;
+              endingTimer = 0;
+              endingText = endingTexts[2];
+              endingCharIndex = 0;
+              endingCharTimer = 0;
+              endingDisplayedText = '';
+            }
+          }
+          break;
+
+        case 4: // Kelsier silhouette + "Someone was watching."
+          {
+            const tw = typewriterUpdate(endingText, endingCharIndex, endingCharTimer, dt, 0.04);
+            endingCharIndex = tw.charIndex;
+            endingCharTimer = tw.charTimer;
+            endingDisplayedText = endingText.substring(0, endingCharIndex);
+            if (endingCharIndex >= endingText.length && endingTimer > 3) {
+              endingPhase = 5;
+              endingTimer = 0;
+            }
+          }
+          break;
+
+        case 5: // Fade to black
+          endingFadeAlpha = Math.min(1, endingFadeAlpha + dt * 0.5);
+          if (endingTimer > 2) {
+            gameState = 'complete';
+          }
+          break;
+      }
+    }
+
+    function renderKelsierSilhouette() {
+      // Draw Kelsier on the rooftop (around col 190, row 7 area)
+      const kx = 190 * TILE - camera.x;
+      const ky = 7 * TILE - camera.y - 48; // standing on rooftop
+
+      ctx.save();
+      ctx.fillStyle = '#0a0a12';
+
+      // Body - broad shoulders, confident stance
+      // Torso
+      ctx.fillRect(kx - 10, ky + 16, 20, 20);
+      // Shoulders (broad)
+      ctx.fillRect(kx - 16, ky + 16, 32, 6);
+      // Head
+      ctx.beginPath();
+      ctx.arc(kx, ky + 10, 8, 0, Math.PI * 2);
+      ctx.fill();
+      // Hair - messy spikes going up
+      ctx.beginPath();
+      ctx.moveTo(kx - 6, ky + 4);
+      ctx.lineTo(kx - 3, ky - 6);
+      ctx.lineTo(kx, ky + 2);
+      ctx.lineTo(kx + 2, ky - 8);
+      ctx.lineTo(kx + 5, ky + 1);
+      ctx.lineTo(kx + 7, ky - 5);
+      ctx.lineTo(kx + 8, ky + 4);
+      ctx.closePath();
+      ctx.fill();
+      // Arms crossed
+      ctx.fillRect(kx - 16, ky + 22, 12, 5);
+      ctx.fillRect(kx + 4, ky + 22, 12, 5);
+      // Forearms crossed over chest
+      ctx.fillRect(kx - 8, ky + 26, 16, 4);
+      // Legs
+      ctx.fillRect(kx - 8, ky + 36, 7, 14);
+      ctx.fillRect(kx + 1, ky + 36, 7, 14);
+      // Mistcloak tails flowing
+      ctx.beginPath();
+      ctx.moveTo(kx - 16, ky + 22);
+      ctx.lineTo(kx - 20, ky + 50);
+      ctx.lineTo(kx - 14, ky + 46);
+      ctx.lineTo(kx - 18, ky + 54);
+      ctx.lineTo(kx - 10, ky + 36);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(kx + 16, ky + 22);
+      ctx.lineTo(kx + 20, ky + 50);
+      ctx.lineTo(kx + 14, ky + 46);
+      ctx.lineTo(kx + 18, ky + 54);
+      ctx.lineTo(kx + 10, ky + 36);
+      ctx.fill();
+
+      // Glint for smile - small bright highlight
+      ctx.fillStyle = '#e8e0d0';
+      ctx.globalAlpha = 0.5 + Math.sin(endingTimer * 2) * 0.3;
+      ctx.fillRect(kx - 3, ky + 13, 6, 1);
+
+      ctx.restore();
+    }
+
+    function renderEndingOverlay() {
+      // Vignette
+      if (endingVignetteAlpha > 0) {
+        ctx.save();
+        const gradient = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
+          canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+        );
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(1, `rgba(0,0,0,${endingVignetteAlpha})`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      // Blue-purple pulse during phase 1
+      if (endingPhase === 1 && endingPulseTimer < 1.5) {
+        const pulseAlpha = Math.max(0, 0.3 - endingPulseTimer * 0.2);
+        ctx.save();
+        ctx.globalAlpha = pulseAlpha;
+        ctx.fillStyle = '#6644aa';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      // Kelsier silhouette during phases 4+
+      if (endingPhase >= 4) {
+        renderKelsierSilhouette();
+      }
+
+      // Text overlay
+      if (endingDisplayedText && endingDisplayedText.trim()) {
+        ctx.save();
+        ctx.fillStyle = '#e8e0d0';
+        ctx.font = '16px monospace';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.9;
+        ctx.fillText(endingDisplayedText, canvas.width / 2, canvas.height - 60);
+        ctx.restore();
+      }
+
+      // Final fade to black
+      if (endingFadeAlpha > 0) {
+        ctx.save();
+        ctx.globalAlpha = endingFadeAlpha;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+    }
+
+    // --- Completion Screen ---
+    let completeBlinkTimer = 0;
+    let completeAnyKeyReady = false;
+    let completeTimer = 0;
+
+    function updateComplete(dt) {
+      completeTimer += dt;
+      completeBlinkTimer += dt;
+      if (!completeAnyKeyReady && completeTimer > 1) {
+        completeAnyKeyReady = true;
+        anyKeyFlag = false;
+      }
+      if (completeAnyKeyReady && anyKeyFlag) {
+        resetGame();
+        anyKeyFlag = false;
+      }
+    }
+
+    function renderComplete() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Ash particles still fall
+      updateParticles(0.016);
+      renderParticles();
+
+      ctx.save();
+      ctx.fillStyle = '#e8e0d0';
+      ctx.textAlign = 'center';
+
+      // "Level 1 Complete"
+      ctx.font = '28px monospace';
+      ctx.fillText('Level 1 Complete', canvas.width / 2, canvas.height / 2 - 40);
+
+      // Boxings collected
+      ctx.font = '16px monospace';
+      ctx.fillText('Boxings collected: ' + player.boxings, canvas.width / 2, canvas.height / 2 + 10);
+
+      // "To be continued..."
+      const blink1 = Math.sin(completeBlinkTimer * 2) > 0;
+      if (blink1) {
+        ctx.globalAlpha = 0.8;
+        ctx.fillText('To be continued...', canvas.width / 2, canvas.height / 2 + 50);
+      }
+
+      // "Press any key to play again"
+      if (completeAnyKeyReady) {
+        const blink2 = Math.sin(completeBlinkTimer * 3) > 0;
+        if (blink2) {
+          ctx.globalAlpha = 0.6;
+          ctx.font = '14px monospace';
+          ctx.fillText('Press any key to play again', canvas.width / 2, canvas.height / 2 + 90);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // --- Reset Game ---
+    function resetGame() {
+      gameState = 'opening';
+      // Reset opening state
+      openingTimer = 0;
+      openingFadeIn = 0;
+      openingLineIndex = 0;
+      openingCharIndex = 0;
+      openingCharTimer = 0;
+      openingPauseTimer = 0;
+      openingDone = false;
+      openingBlinkTimer = 0;
+      openingDisplayedLines = [];
+      openingFadeOut = 0;
+      openingFadingOut = false;
+      openingAnyKeyReady = false;
+      // Reset ending state
+      endingPhase = 0;
+      endingTimer = 0;
+      endingText = '';
+      endingCharIndex = 0;
+      endingCharTimer = 0;
+      endingPauseTimer = 0;
+      endingDisplayedText = '';
+      endingVignetteAlpha = 0;
+      endingPulseTimer = 0;
+      endingCameraPanTarget = 0;
+      endingFadeAlpha = 0;
+      endingGuardsCleared = false;
+      // Reset completion state
+      completeBlinkTimer = 0;
+      completeAnyKeyReady = false;
+      completeTimer = 0;
+      // Reset player
+      player.x = SPAWN_X;
+      player.y = 14 * TILE;
+      player.vx = 0;
+      player.vy = 0;
+      player.hp = player.maxHp;
+      player.boxings = 0;
+      player.dead = false;
+      player.deadTimer = 0;
+      player.checkpoint = 0;
+      player.invincible = false;
+      player.invincibleTimer = 0;
+      player.attacking = false;
+      player.attackTimer = 0;
+      player.luckCooldown = 0;
+      player.luckActive = false;
+      player.onGround = false;
+      // Reset dead end guards
+      deadEndGuard1.alive = true; deadEndGuard1.hp = 2; deadEndGuard1.deathTimer = 0;
+      deadEndGuard1.x = 168 * 32; deadEndGuard1.soothed = false;
+      deadEndGuard2.alive = true; deadEndGuard2.hp = 2; deadEndGuard2.deathTimer = 0;
+      deadEndGuard2.x = 175 * 32; deadEndGuard2.soothed = false;
+      deadEndGuard3.alive = true; deadEndGuard3.hp = 2; deadEndGuard3.deathTimer = 0;
+      deadEndGuard3.x = 182 * 32; deadEndGuard3.soothed = false;
+      // Reset other enemies
+      for (const e of enemies) {
+        if (!deadEndGuards.includes(e)) {
+          e.alive = true;
+          e.hp = e.maxHp;
+          e.deathTimer = 0;
+          e.soothed = false;
+          e.sootheTimer = 0;
+        }
+      }
+      anyKeyFlag = false;
+    }
+
+    // --- Dead End Trigger ---
+    function checkDeadEndTrigger() {
+      if (gameState === 'playing' && player.x > 185 * 32) {
+        gameState = 'ending';
+        endingPhase = 0;
+        endingTimer = 0;
+        endingDisplayedText = '';
+        endingVignetteAlpha = 0;
+        endingPulseTimer = 0;
+        endingFadeAlpha = 0;
+        endingGuardsCleared = false;
+      }
+    }
+
     let lastTime = 0;
     function gameLoop(timestamp) {
       const dt = (timestamp - lastTime) / 1000;
       lastTime = timestamp;
       const safeDt = Math.min(dt, 0.1);
 
-      // Update
-      updatePlayer(safeDt);
-      updatePickups(safeDt);
-      updateEnemies(safeDt);
-      updateCombat(safeDt);
-      updateCrumbleTiles(safeDt);
-      updateAshClumps(safeDt);
-      updateEffects(safeDt);
-      updateAnimation(safeDt);
-      updateCamera();
+      if (gameState === 'opening') {
+        updateOpening(safeDt);
+        renderOpening();
+        requestAnimationFrame(gameLoop);
+        return;
+      }
 
-      // Clear + background (sky gradient replaces flat clear)
+      if (gameState === 'complete') {
+        updateComplete(safeDt);
+        renderComplete();
+        requestAnimationFrame(gameLoop);
+        return;
+      }
+
+      // Update gameplay (only when playing)
+      if (gameState === 'playing') {
+        updatePlayer(safeDt);
+        updatePickups(safeDt);
+        updateEnemies(safeDt);
+        updateCombat(safeDt);
+        updateCrumbleTiles(safeDt);
+        updateAshClumps(safeDt);
+        updateEffects(safeDt);
+        updateAnimation(safeDt);
+        updateCamera();
+        checkDeadEndTrigger();
+      }
+
+      if (gameState === 'ending') {
+        updateEnding(safeDt);
+        updateEffects(safeDt);
+        updateAnimation(safeDt);
+        // Camera update handled by ending phases
+      }
+
+      // Always render world
       renderBackground(safeDt);
-
-      // Render tiles and player
       renderTiles();
       renderAshClumps();
       renderPickups();
@@ -2789,12 +3369,12 @@
       renderEffects();
       renderPlayer();
 
-      // Ash particles (screen-space, in front of everything except HUD)
+      // Ash particles
       updateParticles(safeDt);
       renderParticles();
 
-      // Death overlay
-      if (player.dead) {
+      // Death overlay (only during playing)
+      if (gameState === 'playing' && player.dead) {
         const deathAlpha = Math.min(player.deadTimer / 0.5, 0.7);
         ctx.save();
         ctx.globalAlpha = deathAlpha;
@@ -2813,8 +3393,15 @@
         }
       }
 
-      // HUD (not affected by camera)
-      renderHUD();
+      // Ending overlay
+      if (gameState === 'ending') {
+        renderEndingOverlay();
+      }
+
+      // HUD (only during playing)
+      if (gameState === 'playing') {
+        renderHUD();
+      }
 
       requestAnimationFrame(gameLoop);
     }
