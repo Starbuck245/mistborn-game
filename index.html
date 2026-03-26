@@ -336,6 +336,11 @@
       attackDuration: 0.3,
       attackHitbox: { x: 0, y: 0, width: 20, height: 20 },
       attackTriggered: false,
+      // Health
+      hp: 3,
+      maxHp: 3,
+      invincible: false,
+      invincibleTimer: 0,
     };
 
     function respawnPlayer() {
@@ -346,6 +351,8 @@
       player.onGround = false;
       player.jumpHeld = false;
       player.jumpTime = 0;
+      player.invincible = true;
+      player.invincibleTimer = 1.5;
     }
 
     function updatePlayer(dt) {
@@ -426,6 +433,15 @@
       player.attackHitbox.y = player.y + (player.height / 2) - 10;
       player.attackHitbox.width = 20;
       player.attackHitbox.height = 20;
+
+      // Invincibility timer
+      if (player.invincible) {
+        player.invincibleTimer -= dt;
+        if (player.invincibleTimer <= 0) {
+          player.invincible = false;
+          player.invincibleTimer = 0;
+        }
+      }
     }
 
     function resolveHorizontal() {
@@ -980,6 +996,352 @@
       }
     }
 
+    // --- Street Thug Sprite Data (24x36 pixels) ---
+    // Color palette for thugs
+    const TH = '#3a2a1a';    // hair (messy brown)
+    const Th = '#4a3a2a';    // hair highlight
+    const TS = '#c8a882';    // skin
+    const Ts = '#b08a68';    // skin shadow
+    const TE = '#221111';    // eyes (dark, scowling)
+    const TM = '#8a5040';    // mouth
+    const TC = '#6b5a4a';    // clothing main (ragged brown)
+    const Tc = '#5a4a3a';    // clothing dark
+    const TD = '#4a3a2a';    // clothing darker
+    const TB = '#3a3a3a';    // boots
+    const Tb = '#2a2a2a';    // boots dark
+
+    // THUG WALK frame 1 (standing, right foot forward)
+    const THUG_WALK_1 = [
+      [_,_,_,_,_,_,_,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,TH,Th,TH,TH,TH,TH,TH,TH,TH,Th,TH,_,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,TH,Ts,TS,TS,TS,TS,TS,TS,TS,Ts,TH,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,Ts,TS,TE,TE,TS,TS,TE,TE,TS,TS,Ts,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,Ts,TS,TS,TS,TS,TM,TS,TS,TS,TS,Ts,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,Ts,TS,TS,TM,TM,TM,TM,TM,TS,TS,Ts,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,TH,Ts,TS,TS,TS,TS,Ts,TS,TS,TS,TS,Ts,TH,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,Ts,TS,TS,TS,TS,TS,TS,Ts,_,_,_,_,_,_,_,_],
+      // shoulders (wider than Vin)
+      [_,_,_,TC,TC,TC,TC,TC,TC,Tc,Tc,Tc,Tc,Tc,TC,TC,TC,TC,TC,TC,TC,_,_,_],
+      [_,_,TC,TC,TC,TC,TC,Tc,Tc,Tc,TD,TD,TD,Tc,Tc,Tc,TC,TC,TC,TC,TC,TC,_,_],
+      [_,_,TC,TC,TC,Tc,Tc,Tc,TD,TD,TD,TD,TD,TD,TD,Tc,Tc,Tc,TC,TC,TC,_,_,_],
+      [_,_,_,TC,TC,Tc,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,Tc,TC,TC,_,_,_,_],
+      [_,_,_,TC,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,TC,_,_,_,_],
+      [_,_,_,_,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,_,_,_,_,_],
+      [_,_,_,_,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,_,_,_,_,_],
+      [_,_,_,_,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,_,_,_,_,_],
+      [_,_,_,_,_,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,_,_,_,_,_,_],
+      [_,_,_,_,_,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,_,_,_,_,_,_],
+      // hips
+      [_,_,_,_,_,TC,Tc,TD,TD,TD,TD,TD,TD,TD,TD,TD,Tc,TC,_,_,_,_,_,_],
+      [_,_,_,_,_,TC,Tc,TD,TD,TD,TD,_,_,TD,TD,TD,TD,Tc,TC,_,_,_,_,_],
+      // legs - right forward
+      [_,_,_,_,_,_,TD,TD,TD,TD,_,_,_,_,TD,TD,TD,TD,_,_,_,_,_,_],
+      [_,_,_,_,_,TD,TD,TD,TD,_,_,_,_,_,_,TD,TD,TD,_,_,_,_,_,_],
+      [_,_,_,_,TD,TD,TD,TD,_,_,_,_,_,_,_,_,TD,TD,TD,_,_,_,_,_],
+      [_,_,_,_,TD,TD,TD,_,_,_,_,_,_,_,_,_,_,TD,TD,TD,_,_,_,_],
+      [_,_,_,TD,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_,_],
+      [_,_,_,TD,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_,_],
+      [_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_],
+      [_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_],
+      [_,_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_],
+      [_,_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_],
+      [_,_,_,Tb,TB,TB,Tb,_,_,_,_,_,_,_,_,_,_,Tb,TB,TB,Tb,_,_,_],
+      [_,_,_,Tb,TB,TB,Tb,_,_,_,_,_,_,_,_,_,_,Tb,TB,TB,Tb,_,_,_],
+      [_,_,Tb,TB,TB,TB,TB,_,_,_,_,_,_,_,_,_,_,TB,TB,TB,TB,Tb,_,_],
+      [_,_,Tb,TB,TB,TB,TB,_,_,_,_,_,_,_,_,_,_,TB,TB,TB,TB,Tb,_,_],
+    ];
+
+    // THUG WALK frame 2 (legs together / passing)
+    const THUG_WALK_2 = THUG_WALK_1.map((row, r) => {
+      if (r >= 22 && r <= 31) {
+        // Legs together
+        if (r === 22) return [_,_,_,_,_,_,TD,TD,TD,TD,_,_,_,_,TD,TD,TD,TD,_,_,_,_,_,_];
+        if (r === 23) return [_,_,_,_,_,_,TD,TD,TD,_,_,_,_,_,TD,TD,TD,_,_,_,_,_,_,_];
+        if (r === 24) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 25) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 26) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 27) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 28) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 29) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 30) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+        if (r === 31) return [_,_,_,_,_,_,_,TD,TD,_,_,_,_,_,TD,TD,_,_,_,_,_,_,_,_];
+      }
+      if (r === 32) return [_,_,_,_,_,_,Tb,TB,TB,Tb,_,_,_,Tb,TB,TB,Tb,_,_,_,_,_,_,_];
+      if (r === 33) return [_,_,_,_,_,_,Tb,TB,TB,Tb,_,_,_,Tb,TB,TB,Tb,_,_,_,_,_,_,_];
+      if (r === 34) return [_,_,_,_,_,Tb,TB,TB,TB,TB,_,_,_,TB,TB,TB,TB,Tb,_,_,_,_,_,_];
+      if (r === 35) return [_,_,_,_,_,Tb,TB,TB,TB,TB,_,_,_,TB,TB,TB,TB,Tb,_,_,_,_,_,_];
+      return [...row];
+    });
+
+    // THUG WALK frame 3 (left foot forward - mirror of frame 1)
+    const THUG_WALK_3 = THUG_WALK_1.map((row, r) => {
+      if (r >= 22 && r <= 31) {
+        // Swap legs
+        if (r === 22) return [_,_,_,_,_,_,TD,TD,TD,TD,_,_,_,_,TD,TD,TD,TD,_,_,_,_,_,_];
+        if (r === 23) return [_,_,_,_,_,_,TD,TD,TD,_,_,_,_,_,_,TD,TD,TD,TD,_,_,_,_,_];
+        if (r === 24) return [_,_,_,_,_,TD,TD,TD,_,_,_,_,_,_,_,_,TD,TD,TD,TD,_,_,_,_];
+        if (r === 25) return [_,_,_,_,TD,TD,TD,_,_,_,_,_,_,_,_,_,_,TD,TD,TD,_,_,_,_];
+        if (r === 26) return [_,_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,TD,_,_,_];
+        if (r === 27) return [_,_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,TD,_,_,_];
+        if (r === 28) return [_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_];
+        if (r === 29) return [_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_];
+        if (r === 30) return [_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_,_];
+        if (r === 31) return [_,_,_,TD,TD,_,_,_,_,_,_,_,_,_,_,_,_,_,TD,TD,_,_,_,_];
+      }
+      if (r === 32) return [_,_,Tb,TB,TB,Tb,_,_,_,_,_,_,_,_,_,_,_,Tb,TB,TB,Tb,_,_,_];
+      if (r === 33) return [_,_,Tb,TB,TB,Tb,_,_,_,_,_,_,_,_,_,_,_,Tb,TB,TB,Tb,_,_,_];
+      if (r === 34) return [_,_,TB,TB,TB,TB,Tb,_,_,_,_,_,_,_,_,_,TB,TB,TB,TB,Tb,_,_,_];
+      if (r === 35) return [_,_,TB,TB,TB,TB,Tb,_,_,_,_,_,_,_,_,_,TB,TB,TB,TB,Tb,_,_,_];
+      return [...row];
+    });
+
+    // THUG WALK frame 4 (legs passing other direction)
+    const THUG_WALK_4 = THUG_WALK_2; // reuse passing frame
+
+    // THUG HIT frame (knocked back pose)
+    const THUG_HIT = THUG_WALK_1.map((row, r) => {
+      // Lean back slightly - shift upper body rows
+      if (r === 10) return [_,_,_,_,TC,TC,TC,TC,TC,Tc,Tc,Tc,Tc,Tc,TC,TC,TC,TC,TC,TC,_,_,_,_];
+      if (r === 11) return [_,_,_,TC,TC,TC,TC,Tc,Tc,Tc,TD,TD,TD,Tc,Tc,Tc,TC,TC,TC,TC,TC,_,_,_];
+      return [...row];
+    });
+
+    const THUG_SPRITE_FRAMES = {
+      walk: [THUG_WALK_1, THUG_WALK_2, THUG_WALK_3, THUG_WALK_4],
+      hit: [THUG_HIT],
+    };
+
+    // --- Enemy System ---
+    const enemies = [];
+
+    function createThug(x, y, patrolLeft, patrolRight) {
+      return {
+        type: 'thug',
+        x, y,
+        vx: 0, vy: 0,
+        width: 24, height: 36,
+        hp: 1,
+        maxHp: 1,
+        speed: 60,
+        facing: 1,
+        patrolLeft, patrolRight,
+        alive: true,
+        hitTimer: 0,
+        deathTimer: 0,
+        onGround: false,
+        anim: { state: 'walk', frame: 0, timer: 0 },
+      };
+    }
+
+    function resolveEnemyHorizontal(enemy) {
+      const left = Math.floor(enemy.x / TILE);
+      const right = Math.floor((enemy.x + enemy.width - 0.01) / TILE);
+      const top = Math.floor(enemy.y / TILE);
+      const bottom = Math.floor((enemy.y + enemy.height - 0.01) / TILE);
+
+      for (let r = top; r <= bottom; r++) {
+        for (let c = left; c <= right; c++) {
+          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
+          if (!isSolid(level[r][c])) continue;
+          const tx = c * TILE;
+          if (enemy.vx > 0) {
+            enemy.x = tx - enemy.width;
+            enemy.vx = 0;
+          } else if (enemy.vx < 0) {
+            enemy.x = tx + TILE;
+            enemy.vx = 0;
+          }
+          return;
+        }
+      }
+    }
+
+    function resolveEnemyVertical(enemy) {
+      const left = Math.floor(enemy.x / TILE);
+      const right = Math.floor((enemy.x + enemy.width - 0.01) / TILE);
+      const top = Math.floor(enemy.y / TILE);
+      const bottom = Math.floor((enemy.y + enemy.height - 0.01) / TILE);
+
+      enemy.onGround = false;
+
+      for (let r = top; r <= bottom; r++) {
+        for (let c = left; c <= right; c++) {
+          if (r < 0 || r >= LEVEL_H || c < 0 || c >= LEVEL_W) continue;
+          if (!isSolid(level[r][c])) continue;
+          const ty = r * TILE;
+          if (enemy.vy > 0) {
+            enemy.y = ty - enemy.height;
+            enemy.vy = 0;
+            enemy.onGround = true;
+          } else if (enemy.vy < 0) {
+            enemy.y = ty + TILE;
+            enemy.vy = 0;
+          }
+          return;
+        }
+      }
+    }
+
+    function hasGroundAhead(enemy) {
+      // Check if there's solid ground one step ahead at the enemy's feet level
+      const checkX = enemy.facing === 1 ? enemy.x + enemy.width + 2 : enemy.x - 2;
+      const checkY = enemy.y + enemy.height + 2;
+      const c = Math.floor(checkX / TILE);
+      const r = Math.floor(checkY / TILE);
+      if (c < 0 || c >= LEVEL_W || r < 0 || r >= LEVEL_H) return false;
+      return isSolid(level[r][c]);
+    }
+
+    function updateEnemies(dt) {
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+
+        // Handle death fade
+        if (!e.alive) {
+          e.deathTimer += dt;
+          if (e.deathTimer >= 0.5) {
+            enemies.splice(i, 1);
+          }
+          continue;
+        }
+
+        // Hit stun
+        if (e.hitTimer > 0) {
+          e.hitTimer -= dt;
+          // Still apply gravity during hit stun
+          e.vy += 980 * dt;
+          e.y += e.vy * dt;
+          resolveEnemyVertical(e);
+          // Apply knockback decel
+          e.x += e.vx * dt;
+          resolveEnemyHorizontal(e);
+          e.vx *= 0.9;
+          continue;
+        }
+
+        // Patrol AI
+        e.vx = e.facing * e.speed;
+
+        // Reverse at patrol bounds
+        if (e.x <= e.patrolLeft) {
+          e.facing = 1;
+          e.x = e.patrolLeft;
+        } else if (e.x + e.width >= e.patrolRight) {
+          e.facing = -1;
+          e.x = e.patrolRight - e.width;
+        }
+
+        // Don't walk off edges
+        if (e.onGround && !hasGroundAhead(e)) {
+          e.facing *= -1;
+          e.vx = 0;
+        }
+
+        // Apply gravity
+        e.vy += 980 * dt;
+
+        // Move
+        e.x += e.vx * dt;
+        resolveEnemyHorizontal(e);
+        e.y += e.vy * dt;
+        resolveEnemyVertical(e);
+
+        // Update animation
+        e.anim.timer += dt;
+        if (e.anim.timer >= 0.15) {
+          e.anim.timer -= 0.15;
+          e.anim.frame = (e.anim.frame + 1) % THUG_SPRITE_FRAMES.walk.length;
+        }
+      }
+    }
+
+    function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+
+    function updateCombat(dt) {
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (!e.alive) continue;
+
+        // Player attack hits enemy
+        if (player.attacking && player.attackTimer < 0.15) {
+          const hb = player.attackHitbox;
+          if (rectsOverlap(hb.x, hb.y, hb.width, hb.height, e.x, e.y, e.width, e.height)) {
+            e.hp -= 1;
+            e.hitTimer = 0.3;
+            // Knockback away from player
+            e.vx = (e.x > player.x ? 1 : -1) * 200;
+            e.vy = -100;
+            e.anim.state = 'hit';
+            e.anim.frame = 0;
+
+            if (e.hp <= 0) {
+              e.alive = false;
+              e.deathTimer = 0;
+            }
+          }
+        }
+
+        // Enemy touches player
+        if (e.alive && !player.invincible) {
+          if (rectsOverlap(player.x, player.y, player.width, player.height, e.x, e.y, e.width, e.height)) {
+            player.hp -= 1;
+            player.invincible = true;
+            player.invincibleTimer = 1.5;
+            // Knockback player away from enemy
+            player.vx = (player.x > e.x ? 1 : -1) * 200;
+            player.vy = -150;
+
+            if (player.hp <= 0) {
+              player.hp = player.maxHp;
+              respawnPlayer();
+            }
+          }
+        }
+      }
+    }
+
+    function renderEnemies() {
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        const screenX = Math.round(e.x - camera.x);
+        const screenY = Math.round(e.y - camera.y);
+
+        // Skip if off screen
+        if (screenX + e.width < 0 || screenX > canvas.width || screenY + e.height < 0 || screenY > canvas.height) continue;
+
+        ctx.save();
+
+        if (!e.alive) {
+          // Death fade out
+          ctx.globalAlpha = Math.max(0, 1 - e.deathTimer / 0.5);
+        } else if (e.hitTimer > 0) {
+          // Flash white when hit
+          ctx.globalAlpha = (Math.floor(e.hitTimer * 20) % 2 === 0) ? 0.4 : 1;
+        }
+
+        const frames = e.hitTimer > 0 ? THUG_SPRITE_FRAMES.hit : THUG_SPRITE_FRAMES.walk;
+        const spriteData = frames[e.anim.frame % frames.length];
+        const flip = e.facing === -1;
+        drawSprite(spriteData, screenX, screenY, flip);
+
+        ctx.restore();
+      }
+    }
+
+    // --- Place thugs in the Slums (cols 0-69) ---
+    // Ground is at row 17, so standing y = 17*32 - 36 = 508
+    // Raised section cols 34-40 at row 15, y = 15*32 - 36 = 444
+    // Wide raised area cols 54-62 at row 15, y = 15*32 - 36 = 444
+    enemies.push(createThug(10 * 32, 17 * 32 - 36, 1 * 32, 12 * 32));    // patrol on ground cols 1-12
+    enemies.push(createThug(25 * 32, 17 * 32 - 36, 22 * 32, 29 * 32));   // patrol on ground cols 22-29
+    enemies.push(createThug(37 * 32, 15 * 32 - 36, 34 * 32, 40 * 32));   // on raised section cols 34-40
+    enemies.push(createThug(57 * 32, 15 * 32 - 36, 54 * 32, 62 * 32));   // on wide raised area cols 54-62
+    enemies.push(createThug(64 * 32, 17 * 32 - 36, 60 * 32, 67 * 32));   // near section end
+
     function renderPlayer() {
       const screenX = Math.round(player.x - camera.x);
       const screenY = Math.round(player.y - camera.y);
@@ -987,7 +1349,13 @@
       const frames = SPRITE_FRAMES[anim.state];
       const spriteData = frames[anim.frame % frames.length];
       const flip = player.facing === -1;
+
+      // Flash during invincibility
+      if (player.invincible && Math.floor(player.invincibleTimer * 10) % 2 === 0) {
+        ctx.globalAlpha = 0.3;
+      }
       drawSprite(spriteData, screenX, screenY, flip);
+      ctx.globalAlpha = 1;
 
       // --- Knife slash visual effect ---
       if (player.attacking) {
@@ -1370,6 +1738,8 @@
 
       // Update
       updatePlayer(safeDt);
+      updateEnemies(safeDt);
+      updateCombat(safeDt);
       updateAnimation(safeDt);
       updateCamera();
 
@@ -1378,6 +1748,7 @@
 
       // Render tiles and player
       renderTiles();
+      renderEnemies();
       renderPlayer();
 
       // Ash particles (screen-space, in front of everything except HUD)
