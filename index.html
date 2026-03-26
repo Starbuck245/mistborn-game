@@ -341,6 +341,12 @@
       maxHp: 3,
       invincible: false,
       invincibleTimer: 0,
+      // Luck (Soothe) ability
+      luckCooldown: 0,
+      luckMaxCooldown: 5,
+      luckRadius: 120,
+      luckActive: false,
+      luckTriggered: false,
     };
 
     function respawnPlayer() {
@@ -441,6 +447,59 @@
           player.invincible = false;
           player.invincibleTimer = 0;
         }
+      }
+
+      // --- Luck (Soothe) ability ---
+      if (player.luckCooldown > 0) {
+        player.luckCooldown -= dt;
+        if (player.luckCooldown < 0) player.luckCooldown = 0;
+      }
+
+      if (input.luck && !player.luckTriggered && player.luckCooldown <= 0) {
+        player.luckTriggered = true;
+        // Find nearest alive enemy within luckRadius
+        const pcx = player.x + player.width / 2;
+        const pcy = player.y + player.height / 2;
+        let nearest = null;
+        let nearestDist = Infinity;
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          if (!e.alive || e.soothed) continue;
+          const ecx = e.x + e.width / 2;
+          const ecy = e.y + e.height / 2;
+          const dist = Math.sqrt((pcx - ecx) * (pcx - ecx) + (pcy - ecy) * (pcy - ecy));
+          if (dist <= player.luckRadius && dist < nearestDist) {
+            nearestDist = dist;
+            nearest = e;
+          }
+        }
+        if (nearest) {
+          nearest.soothed = true;
+          nearest.sootheTimer = nearest.sootheDuration;
+          nearest.vx = 0;
+          nearest.attacking = false;
+          nearest.detecting = false;
+          player.luckCooldown = player.luckMaxCooldown;
+          // Spawn pulse effect
+          effects.push({
+            type: 'luckPulse',
+            x: pcx,
+            y: pcy,
+            radius: 0,
+            maxRadius: 150,
+            timer: 0,
+            duration: 0.5
+          });
+          // Spawn vignette effect
+          effects.push({
+            type: 'vignette',
+            timer: 0,
+            duration: 0.4
+          });
+        }
+      }
+      if (!input.luck) {
+        player.luckTriggered = false;
       }
     }
 
@@ -1268,6 +1327,9 @@
         hitTimer: 0,
         deathTimer: 0,
         onGround: false,
+        soothed: false,
+        sootheTimer: 0,
+        sootheDuration: 2.5,
         anim: { state: 'walk', frame: 0, timer: 0 },
       };
     }
@@ -1287,6 +1349,8 @@
         hitTimer: 0,
         deathTimer: 0,
         onGround: false,
+        soothed: false,
+        sootheTimer: 0,
         sootheDuration: 1.5,
         // Detection
         detecting: false,
@@ -1359,6 +1423,101 @@
       return isSolid(level[r][c]);
     }
 
+    // --- Visual Effects System ---
+    const effects = [];
+
+    function updateEffects(dt) {
+      for (let i = effects.length - 1; i >= 0; i--) {
+        const fx = effects[i];
+        fx.timer += dt;
+        if (fx.type === 'luckPulse') {
+          fx.radius = (fx.timer / fx.duration) * fx.maxRadius;
+        }
+        if (fx.timer >= fx.duration) {
+          effects.splice(i, 1);
+        }
+      }
+    }
+
+    function renderEffects() {
+      for (let i = 0; i < effects.length; i++) {
+        const fx = effects[i];
+        if (fx.type === 'luckPulse') {
+          const progress = fx.timer / fx.duration;
+          const alpha = Math.max(0, 1 - progress);
+          const screenX = fx.x - camera.x;
+          const screenY = fx.y - camera.y;
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.6;
+          ctx.strokeStyle = '#6644aa';
+          ctx.lineWidth = 3 * (1 - progress) + 1;
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, fx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          // Inner glow ring
+          ctx.globalAlpha = alpha * 0.3;
+          ctx.strokeStyle = '#8866cc';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, fx.radius * 0.7, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        } else if (fx.type === 'vignette') {
+          const progress = fx.timer / fx.duration;
+          const alpha = Math.max(0, (1 - progress) * 0.4);
+          const grad = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, canvas.width * 0.3,
+            canvas.width / 2, canvas.height / 2, canvas.width * 0.8
+          );
+          grad.addColorStop(0, 'rgba(0,0,0,0)');
+          grad.addColorStop(1, `rgba(30,20,60,${alpha})`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+    }
+
+    function renderSoothedIndicators() {
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (!e.soothed || !e.alive) continue;
+        const screenX = Math.round(e.x - camera.x);
+        const screenY = Math.round(e.y - camera.y);
+
+        // Blue tint overlay on enemy
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#4466cc';
+        ctx.fillRect(screenX, screenY, e.width, e.height);
+        ctx.restore();
+
+        // Swirling particles above head
+        const t = performance.now() / 1000;
+        const cx = screenX + e.width / 2;
+        const cy = screenY - 8;
+        for (let p = 0; p < 3; p++) {
+          const angle = t * 3 + (p * Math.PI * 2 / 3);
+          const px = cx + Math.cos(angle) * 6;
+          const py = cy + Math.sin(angle * 0.7) * 3 - 2;
+          ctx.save();
+          ctx.globalAlpha = 0.7;
+          ctx.fillStyle = '#6688ff';
+          ctx.beginPath();
+          ctx.arc(px, py, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Confused indicator "?" or stars
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#8888ff';
+        ctx.font = '10px monospace';
+        ctx.fillText('?', cx - 3, screenY - 14);
+        ctx.restore();
+      }
+    }
+
     function updateEnemies(dt) {
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
@@ -1369,6 +1528,21 @@
           if (e.deathTimer >= 0.5) {
             enemies.splice(i, 1);
           }
+          continue;
+        }
+
+        // Soothed state: freeze enemy
+        if (e.soothed) {
+          e.sootheTimer -= dt;
+          e.vx = 0;
+          if (e.sootheTimer <= 0) {
+            e.soothed = false;
+            e.sootheTimer = 0;
+          }
+          // Still apply gravity while soothed
+          e.vy += 980 * dt;
+          e.y += e.vy * dt;
+          resolveEnemyVertical(e);
           continue;
         }
 
@@ -2035,6 +2209,7 @@
       updatePlayer(safeDt);
       updateEnemies(safeDt);
       updateCombat(safeDt);
+      updateEffects(safeDt);
       updateAnimation(safeDt);
       updateCamera();
 
@@ -2044,6 +2219,8 @@
       // Render tiles and player
       renderTiles();
       renderEnemies();
+      renderSoothedIndicators();
+      renderEffects();
       renderPlayer();
 
       // Ash particles (screen-space, in front of everything except HUD)
@@ -2067,6 +2244,35 @@
         ctx.font = '11px monospace';
         ctx.fillText(name, 14 + i * 60, inputY + 14);
       });
+
+      // Luck cooldown bar (bottom center)
+      const barW = 200;
+      const barH = 6;
+      const barX = (canvas.width - barW) / 2;
+      const barY = canvas.height - 30;
+      // Label
+      ctx.fillStyle = '#9988bb';
+      ctx.font = '10px monospace';
+      ctx.fillText('LUCK', barX + barW / 2 - 14, barY - 4);
+      // Background
+      ctx.fillStyle = '#333';
+      ctx.fillRect(barX, barY, barW, barH);
+      // Fill
+      if (player.luckCooldown <= 0) {
+        // Ready - full blue-purple
+        ctx.fillStyle = '#6644aa';
+        ctx.fillRect(barX, barY, barW, barH);
+      } else {
+        // Recharging - fill left to right
+        const pct = 1 - (player.luckCooldown / player.luckMaxCooldown);
+        ctx.fillStyle = '#6644aa';
+        ctx.fillRect(barX, barY, barW * pct, barH);
+      }
+      // Border
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+
 
       requestAnimationFrame(gameLoop);
     }
