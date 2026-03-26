@@ -960,72 +960,35 @@
       fillRect(137, 14, 138, 14, 3);
 
       // ========== SECTION 3: THE DEAD END (cols 140-199) ==========
-      // Base ground
+      // Continuous ground — NO gaps in the Dead End, just run forward
       fillRect(140, 17, 199, 19, 1);
 
-      // Narrow alley - walls close in from top
-      // Left wall column rises (cols 140-142, rows 10-16)
-      fillRect(140, 10, 142, 16, 1);
+      // Ground level floor the whole way (flat, easy to traverse)
+      fillRect(140, 15, 199, 16, 1);
 
-      // Ground level continues
-      fillRect(143, 15, 150, 16, 1);
+      // Ceiling gradually closes in — creates claustrophobic feeling
+      // Ceiling step 1 (cols 143-199, rows 0-4)
+      fillRect(143, 0, 199, 4, 1);
+      // Ceiling step 2 (cols 150-199, rows 0-6)
+      fillRect(150, 0, 199, 6, 1);
+      // Ceiling step 3 (cols 160-199, rows 0-8)
+      fillRect(160, 0, 199, 8, 1);
+      // Ceiling step 4 (cols 170-199, rows 0-9)
+      fillRect(170, 0, 199, 9, 1);
+      // Ceiling step 5 (cols 180-199, rows 0-10)
+      fillRect(180, 0, 199, 10, 1);
 
-      // Ceiling starts coming down (cols 145-199, rows 0-3)
-      fillRect(145, 0, 199, 3, 1);
+      // Short obstacles to jump over (NOT walls, just bumps)
+      fillRect(148, 14, 149, 14, 1);  // small bump
+      fillRect(158, 13, 159, 14, 1);  // medium bump
+      fillRect(168, 13, 169, 14, 1);  // medium bump
 
-      // Walls on sides narrow the path
-      // Left walls
-      fillRect(148, 4, 150, 10, 1);
+      // Toxic puddles on the floor
+      fillRect(153, 14, 155, 14, 3);
+      fillRect(174, 14, 176, 14, 3);
 
-      // Platform in narrow section
-      fillRect(152, 12, 155, 12, 1);
-
-      // More ceiling (cols 155-199, rows 0-5)
-      fillRect(155, 0, 199, 5, 1);
-
-      // Raised ground (cols 156-162, rows 15-16)
-      fillRect(156, 15, 162, 16, 1);
-
-      // Narrow passage walls (cols 160-162, rows 6-12)
-      fillRect(160, 6, 162, 12, 1);
-
-      // Gap (cols 163-164)
-      fillRect(163, 17, 164, 19, 0);
-      fillRect(163, 15, 164, 16, 0);
-
-      // Platform
-      fillRect(163, 13, 164, 13, 2); // crumbling
-
-      // Continuing narrow alley
-      fillRect(165, 14, 175, 16, 1);
-
-      // Ceiling gets lower (cols 168-199, rows 0-7)
-      fillRect(168, 0, 199, 7, 1);
-
-      // Toxic puddles in alley
-      fillRect(170, 13, 172, 13, 3);
-
-      // Walls narrow more
-      fillRect(173, 8, 175, 12, 1);
-
-      // Very narrow section (cols 176-185)
-      fillRect(176, 14, 185, 16, 1);
-      fillRect(176, 8, 178, 11, 1);
-
-      // Even lower ceiling (cols 180-199, rows 0-9)
-      fillRect(180, 0, 199, 9, 1);
-
-      // Small platform
-      fillRect(182, 12, 183, 12, 1);
-
-      // Final approach
-      fillRect(186, 13, 195, 16, 1);
-
-      // Dead end wall (cols 196-199, full height)
+      // Dead end wall (cols 196-199, floor to ceiling)
       fillRect(196, 0, 199, 19, 1);
-
-      // Toxic puddles near dead end
-      fillRect(192, 12, 194, 12, 3);
 
       return map;
     }
@@ -3129,9 +3092,9 @@
       enemies.push(createGuard(121 * TILE, 13 * TILE - 80, 120 * TILE, 125 * TILE)); // on raised area
 
       // --- Dead End Guards (cols 165-195) ---
-      const dg1 = createGuard(168 * TILE, 14 * TILE - 80, 165 * TILE, 175 * TILE);
-      const dg2 = createGuard(175 * TILE, 14 * TILE - 80, 170 * TILE, 180 * TILE);
-      const dg3 = createGuard(182 * TILE, 13 * TILE - 80, 178 * TILE, 190 * TILE);
+      const dg1 = createGuard(160 * TILE, 15 * TILE - 80, 155 * TILE, 170 * TILE);
+      const dg2 = createGuard(175 * TILE, 15 * TILE - 80, 170 * TILE, 185 * TILE);
+      const dg3 = createGuard(188 * TILE, 15 * TILE - 80, 182 * TILE, 195 * TILE);
       enemies.push(dg1);
       enemies.push(dg2);
       enemies.push(dg3);
