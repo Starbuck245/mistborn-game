@@ -768,6 +768,8 @@
     let endingPulseTimer = 0;
     let endingCameraPanTarget = 0;
     let endingFadeAlpha = 0;
+    let endingCinematicFade = 0;
+    let endingKelsierReveal = 0;
     let endingGuardsCleared = false;
     let deadEndGuards = []; // references to the 3 guards in the Dead End
 
@@ -3269,25 +3271,7 @@
     }
 
     // --- Parallax Background ---
-    // Generate procedural background element positions (seeded once)
-    const bgElements = {
-      // Far layer: Kredik Shaw spires + smokestacks
-      farSpires: [],
-      farStacks: [],
-      // Mid layer: skaa shack rooftops
-      midRoofs: [],
-      midWindows: [],
-      midSteam: [],
-      // Near layer: fence posts, barrels, crates
-      nearFences: [],
-      nearBarrels: [],
-      nearCrates: [],
-    };
-
-    // Repeating tile width for each layer (in virtual pixels)
-    const BG_FAR_W = 1200;
-    const BG_MID_W = 900;
-    const BG_NEAR_W = 700;
+    // Section-based backgrounds for Luthadel exploration
 
     function seedRandom(seed) {
       let s = seed;
@@ -3297,59 +3281,103 @@
       };
     }
 
-    (function generateBgElements() {
+    // Section boundaries in world pixels
+    const SECTION_SLUMS_END = 70 * TILE;
+    const SECTION_BORDER_END = 140 * TILE;
+    // Dead End: 140*TILE to end
+
+    // Pre-generate elements for each section using seeded RNG
+    const bgSections = {};
+    (function generateAllBgElements() {
       const rng = seedRandom(42);
 
-      // Far layer: Kredik Shaw - a big central spiky palace + flanking spires
-      // Main palace body
-      bgElements.farSpires.push({ x: 300, w: 200, h: 280, spikes: 7 });
-      // Flanking spires
-      for (let i = 0; i < 5; i++) {
-        bgElements.farSpires.push({
-          x: rng() * BG_FAR_W,
-          w: 15 + rng() * 30,
-          h: 80 + rng() * 180,
-          spikes: 1 + Math.floor(rng() * 3),
-        });
+      // --- SLUMS elements ---
+      const slums = { farStacks: [], farShanties: [], midShacks: [], midWindows: [], midLaundry: [], midScaffolding: [], nearBarrels: [], nearCrates: [], nearPuddles: [], nearTrash: [] };
+      // Far: crooked smokestacks
+      for (let i = 0; i < 8; i++) {
+        slums.farStacks.push({ x: rng() * 1200, w: 10 + rng() * 14, h: 80 + rng() * 140, lean: (rng() - 0.5) * 0.15 });
       }
-      // Smokestacks
-      for (let i = 0; i < 3; i++) {
-        bgElements.farStacks.push({
-          x: rng() * BG_FAR_W,
-          w: 12 + rng() * 10,
-          h: 100 + rng() * 120,
-        });
-      }
-
-      // Mid layer: skaa rooftops
+      // Far: shanty rooftops in distance
       for (let i = 0; i < 12; i++) {
-        const rx = rng() * BG_MID_W;
-        const rw = 40 + rng() * 80;
-        const rh = 25 + rng() * 40;
-        bgElements.midRoofs.push({ x: rx, w: rw, h: rh, peaked: rng() > 0.5 });
-        // Some roofs have lit windows
-        if (rng() > 0.4) {
-          const wx = rx + 8 + rng() * (rw - 20);
-          const wy = rh - 10 - rng() * 10;
-          bgElements.midWindows.push({ x: wx, y: wy, w: 5 + rng() * 6, h: 5 + rng() * 5, flicker: rng() * 6.28 });
+        slums.farShanties.push({ x: rng() * 1200, w: 30 + rng() * 60, h: 15 + rng() * 30, peaked: rng() > 0.4 });
+      }
+      // Mid: crowded skaa shacks
+      for (let i = 0; i < 14; i++) {
+        const sx = rng() * 900;
+        const sw = 35 + rng() * 70;
+        const sh = 30 + rng() * 50;
+        slums.midShacks.push({ x: sx, w: sw, h: sh, peaked: rng() > 0.5 });
+        // Flickering amber windows
+        const winCount = 1 + Math.floor(rng() * 3);
+        for (let w = 0; w < winCount; w++) {
+          if (rng() > 0.3) {
+            slums.midWindows.push({ x: sx + 6 + rng() * (sw - 16), y: sh - 8 - rng() * (sh * 0.5), w: 4 + rng() * 5, h: 4 + rng() * 4, flicker: rng() * 6.28 });
+          }
         }
       }
-      // Steam wisps
+      // Mid: laundry lines
       for (let i = 0; i < 5; i++) {
-        bgElements.midSteam.push({ x: rng() * BG_MID_W, phase: rng() * 6.28 });
+        slums.midLaundry.push({ x1: rng() * 800, x2: rng() * 800, y: 20 + rng() * 30, clothCount: 2 + Math.floor(rng() * 4), phase: rng() * 6.28 });
       }
+      // Mid: wooden scaffolding
+      for (let i = 0; i < 3; i++) {
+        slums.midScaffolding.push({ x: rng() * 900, w: 25 + rng() * 40, h: 40 + rng() * 50 });
+      }
+      // Near: broken barrels, crates, puddles, trash
+      for (let i = 0; i < 6; i++) slums.nearBarrels.push({ x: rng() * 700, r: 7 + rng() * 6, broken: rng() > 0.5 });
+      for (let i = 0; i < 5; i++) slums.nearCrates.push({ x: rng() * 700, s: 10 + rng() * 14 });
+      for (let i = 0; i < 4; i++) slums.nearPuddles.push({ x: rng() * 700, w: 15 + rng() * 25 });
+      for (let i = 0; i < 6; i++) slums.nearTrash.push({ x: rng() * 700, s: 4 + rng() * 8 });
+      bgSections.slums = slums;
 
-      // Near layer: fence posts, barrels, crates
-      for (let i = 0; i < 15; i++) {
-        bgElements.nearFences.push({ x: i * (BG_NEAR_W / 15) + rng() * 20 });
+      // --- BORDER elements ---
+      const border = { farNoble: [], farKredik: [], midWalls: [], midGates: [], midTowers: [], nearFences: [], nearPillars: [], nearPostings: [] };
+      // Far: tall stone noble buildings
+      for (let i = 0; i < 8; i++) {
+        border.farNoble.push({ x: rng() * 1200, w: 40 + rng() * 80, h: 100 + rng() * 160, spires: Math.floor(rng() * 3) });
       }
+      // Far: Kredik Shaw more prominent
+      border.farKredik.push({ x: 400, w: 250, h: 320, spikes: 9 });
+      // Mid: stone walls and gates
       for (let i = 0; i < 6; i++) {
-        bgElements.nearBarrels.push({ x: rng() * BG_NEAR_W, r: 8 + rng() * 6 });
+        border.midWalls.push({ x: rng() * 900, w: 60 + rng() * 100, h: 40 + rng() * 60 });
       }
-      for (let i = 0; i < 5; i++) {
-        bgElements.nearCrates.push({ x: rng() * BG_NEAR_W, s: 12 + rng() * 14 });
+      for (let i = 0; i < 3; i++) {
+        border.midGates.push({ x: rng() * 900, w: 30 + rng() * 20, h: 50 + rng() * 30 });
       }
+      // Mid: guard towers
+      for (let i = 0; i < 4; i++) {
+        border.midTowers.push({ x: rng() * 900, w: 18 + rng() * 12, h: 60 + rng() * 50, torchPhase: rng() * 6.28 });
+      }
+      // Near: iron fences, stone pillars
+      for (let i = 0; i < 12; i++) border.nearFences.push({ x: i * 60 + rng() * 20 });
+      for (let i = 0; i < 5; i++) border.nearPillars.push({ x: rng() * 700, w: 10 + rng() * 8, h: 35 + rng() * 20 });
+      for (let i = 0; i < 4; i++) border.nearPostings.push({ x: rng() * 700 });
+      bgSections.border = border;
+
+      // --- DEAD END elements ---
+      const deadEnd = { farWalls: [], midPipes: [], midBoarded: [], midCracks: [], nearChains: [], nearCrates: [], nearRats: [] };
+      // Far: towering dark walls closing in
+      deadEnd.farWalls.push({ x: 0, w: 300, h: 400, side: 'left' });
+      deadEnd.farWalls.push({ x: 900, w: 300, h: 400, side: 'right' });
+      for (let i = 0; i < 4; i++) {
+        deadEnd.farWalls.push({ x: rng() * 1200, w: 80 + rng() * 120, h: 250 + rng() * 150, side: 'mid' });
+      }
+      // Mid: dripping pipes, cracked walls, boarded windows
+      for (let i = 0; i < 6; i++) deadEnd.midPipes.push({ x: rng() * 900, y: 20 + rng() * 40, len: 30 + rng() * 60, dripPhase: rng() * 6.28 });
+      for (let i = 0; i < 5; i++) deadEnd.midBoarded.push({ x: rng() * 900, y: 15 + rng() * 40, w: 8 + rng() * 10, h: 10 + rng() * 12 });
+      for (let i = 0; i < 8; i++) deadEnd.midCracks.push({ x: rng() * 900, y: rng() * 60, len: 10 + rng() * 30, angle: rng() * 3.14 });
+      // Near: broken crates, chains, rats
+      for (let i = 0; i < 4; i++) deadEnd.nearCrates.push({ x: rng() * 700, s: 8 + rng() * 12, broken: rng() > 0.3 });
+      for (let i = 0; i < 5; i++) deadEnd.nearChains.push({ x: rng() * 700, len: 20 + rng() * 40, swayPhase: rng() * 6.28 });
+      for (let i = 0; i < 3; i++) deadEnd.nearRats.push({ x: rng() * 700, phase: rng() * 6.28, speed: 20 + rng() * 30 });
+      bgSections.deadEnd = deadEnd;
     })();
+
+    // Repeating tile widths
+    const BG_FAR_W = 1200;
+    const BG_MID_W = 900;
+    const BG_NEAR_W = 700;
 
     let bgTime = 0;
 
@@ -3357,193 +3385,661 @@
       bgTime += dt;
       const W = canvas.width;
       const H = canvas.height;
+      const camX = camera.x;
 
-      // Sky gradient (replaces flat clear)
+      // Determine section blend: 0=slums, 1=border, 2=deadEnd
+      // Use smooth transitions over 5 tile widths at boundaries
+      const transW = 5 * TILE;
+      let slumAlpha = 1, borderAlpha = 0, deadAlpha = 0;
+
+      if (camX < SECTION_SLUMS_END - transW) {
+        slumAlpha = 1; borderAlpha = 0; deadAlpha = 0;
+      } else if (camX < SECTION_SLUMS_END + transW) {
+        const t = (camX - (SECTION_SLUMS_END - transW)) / (2 * transW);
+        slumAlpha = 1 - t; borderAlpha = t; deadAlpha = 0;
+      } else if (camX < SECTION_BORDER_END - transW) {
+        slumAlpha = 0; borderAlpha = 1; deadAlpha = 0;
+      } else if (camX < SECTION_BORDER_END + transW) {
+        const t = (camX - (SECTION_BORDER_END - transW)) / (2 * transW);
+        slumAlpha = 0; borderAlpha = 1 - t; deadAlpha = t;
+      } else {
+        slumAlpha = 0; borderAlpha = 0; deadAlpha = 1;
+      }
+
+      // --- SKY ---
       const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
-      skyGrad.addColorStop(0, '#2a1520');
-      skyGrad.addColorStop(0.3, '#3a2028');
-      skyGrad.addColorStop(0.6, '#1e1520');
-      skyGrad.addColorStop(1, '#12101a');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, W, H);
-
-      // --- Far layer (0.1x camera speed) ---
-      const farOffX = -(camera.x * 0.1) % BG_FAR_W;
-      const groundBase = H * 0.75; // background ground line
-
-      ctx.save();
-      // Draw two tiles for seamless wrapping
-      for (let t = -1; t <= Math.ceil(W / BG_FAR_W) + 1; t++) {
-        const ox = farOffX + t * BG_FAR_W;
-
-        // Kredik Shaw spires
-        bgElements.farSpires.forEach(sp => {
-          const sx = ox + sp.x;
-          if (sx + sp.w < -50 || sx > W + 50) return;
-          const baseY = groundBase - 20;
-
-          ctx.fillStyle = '#1a0f1a';
-          // Main body
-          ctx.fillRect(sx, baseY - sp.h * 0.4, sp.w, sp.h * 0.4);
-
-          // Spikes on top
-          for (let s = 0; s < sp.spikes; s++) {
-            const spikeX = sx + (sp.w / (sp.spikes + 1)) * (s + 1);
-            const spikeH = sp.h * (0.4 + Math.random() * 0.2);
-            ctx.beginPath();
-            ctx.moveTo(spikeX - 6, baseY - sp.h * 0.4);
-            ctx.lineTo(spikeX, baseY - spikeH);
-            ctx.lineTo(spikeX + 6, baseY - sp.h * 0.4);
-            ctx.fill();
-          }
-        });
-
-        // Smokestacks
-        bgElements.farStacks.forEach(st => {
-          const sx = ox + st.x;
-          if (sx + st.w < -20 || sx > W + 20) return;
-          const baseY = groundBase - 20;
-
-          ctx.fillStyle = '#1a0f1a';
-          ctx.fillRect(sx, baseY - st.h, st.w, st.h);
-
-          // Orange glow at top
-          const glow = ctx.createRadialGradient(sx + st.w / 2, baseY - st.h, 2, sx + st.w / 2, baseY - st.h, 15 + Math.sin(bgTime * 2 + st.x) * 5);
-          glow.addColorStop(0, 'rgba(255, 120, 40, 0.6)');
-          glow.addColorStop(1, 'rgba(255, 80, 20, 0)');
-          ctx.fillStyle = glow;
-          ctx.beginPath();
-          ctx.arc(sx + st.w / 2, baseY - st.h, 18, 0, Math.PI * 2);
-          ctx.fill();
-        });
+      if (slumAlpha > 0.01) {
+        // Slums: hazy red-grey
+        ctx.save();
+        ctx.globalAlpha = slumAlpha;
+        const sg = ctx.createLinearGradient(0, 0, 0, H);
+        sg.addColorStop(0, '#3a2225');
+        sg.addColorStop(0.25, '#4a2a2a');
+        sg.addColorStop(0.5, '#352228');
+        sg.addColorStop(1, '#1a1018');
+        ctx.fillStyle = sg;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
       }
-      ctx.restore();
+      if (borderAlpha > 0.01) {
+        // Border: darker, more ominous, thicker ash
+        ctx.save();
+        ctx.globalAlpha = borderAlpha;
+        const bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, '#1a1825');
+        bg.addColorStop(0.3, '#22202e');
+        bg.addColorStop(0.6, '#181520');
+        bg.addColorStop(1, '#0e0c15');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+      if (deadAlpha > 0.01) {
+        // Dead End: almost black, narrow alley
+        ctx.save();
+        ctx.globalAlpha = deadAlpha;
+        const dg = ctx.createLinearGradient(0, 0, 0, H);
+        dg.addColorStop(0, '#0c0810');
+        dg.addColorStop(0.3, '#0a0710');
+        dg.addColorStop(0.7, '#08060c');
+        dg.addColorStop(1, '#050408');
+        ctx.fillStyle = dg;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
 
-      // --- Mid layer (0.3x camera speed) ---
-      const midOffX = -(camera.x * 0.3) % BG_MID_W;
+      const groundBase = H * 0.75;
       const midBase = H * 0.82;
-
-      ctx.save();
-      for (let t = -1; t <= Math.ceil(W / BG_MID_W) + 1; t++) {
-        const ox = midOffX + t * BG_MID_W;
-
-        // Rooftops
-        bgElements.midRoofs.forEach(rf => {
-          const rx = ox + rf.x;
-          if (rx + rf.w < -20 || rx > W + 20) return;
-          const ry = midBase;
-
-          ctx.fillStyle = '#221a25';
-          if (rf.peaked) {
-            // Peaked roof
-            ctx.beginPath();
-            ctx.moveTo(rx, ry);
-            ctx.lineTo(rx + rf.w / 2, ry - rf.h);
-            ctx.lineTo(rx + rf.w, ry);
-            ctx.closePath();
-            ctx.fill();
-            // Wall below
-            ctx.fillRect(rx + 5, ry, rf.w - 10, 30);
-          } else {
-            // Flat roof building
-            ctx.fillRect(rx, ry - rf.h, rf.w, rf.h + 30);
-          }
-        });
-
-        // Lit windows
-        bgElements.midWindows.forEach(win => {
-          const wx = ox + win.x;
-          if (wx < -20 || wx > W + 20) return;
-          const wy = midBase - win.y;
-
-          // Flicker
-          const brightness = 0.6 + 0.4 * Math.sin(bgTime * 3 + win.flicker);
-          const alpha = 0.4 + brightness * 0.5;
-          ctx.fillStyle = `rgba(255, 180, 60, ${alpha})`;
-          ctx.fillRect(wx, wy, win.w, win.h);
-
-          // Glow around window
-          ctx.fillStyle = `rgba(255, 150, 40, ${alpha * 0.2})`;
-          ctx.fillRect(wx - 3, wy - 3, win.w + 6, win.h + 6);
-        });
-
-        // Steam wisps
-        bgElements.midSteam.forEach(st => {
-          const sx = ox + st.x;
-          if (sx < -30 || sx > W + 30) return;
-
-          ctx.strokeStyle = 'rgba(150, 140, 160, 0.15)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          for (let i = 0; i < 30; i++) {
-            const py = midBase - 40 - i * 3;
-            const px = sx + Math.sin(bgTime * 0.8 + st.phase + i * 0.3) * 12;
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-          }
-          ctx.stroke();
-        });
-      }
-      ctx.restore();
-
-      // --- Near layer (0.6x camera speed) ---
-      const nearOffX = -(camera.x * 0.6) % BG_NEAR_W;
       const nearBase = H * 0.88;
 
-      ctx.save();
-      for (let t = -1; t <= Math.ceil(W / BG_NEAR_W) + 1; t++) {
-        const ox = nearOffX + t * BG_NEAR_W;
+      // ==============================
+      // SLUMS BACKGROUND (cols 0-69)
+      // ==============================
+      if (slumAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = slumAlpha;
 
-        // Fence posts
-        ctx.fillStyle = '#0f0a12';
-        bgElements.nearFences.forEach(fp => {
-          const fx = ox + fp.x;
-          if (fx < -10 || fx > W + 10) return;
-          ctx.fillRect(fx, nearBase - 30, 3, 35);
-        });
+        // --- Far layer (0.1x) ---
+        const farOff = -(camX * 0.1) % BG_FAR_W;
+        for (let t = -1; t <= Math.ceil(W / BG_FAR_W) + 1; t++) {
+          const ox = farOff + t * BG_FAR_W;
 
-        // Fence rail connecting posts
-        ctx.strokeStyle = '#0f0a12';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(ox, nearBase - 18);
-        ctx.lineTo(ox + BG_NEAR_W, nearBase - 18);
-        ctx.stroke();
+          // Distant shanty rooftops
+          bgSections.slums.farShanties.forEach(sh => {
+            const sx = ox + sh.x;
+            if (sx + sh.w < -30 || sx > W + 30) return;
+            const by = groundBase - 15;
+            ctx.fillStyle = '#1e1418';
+            if (sh.peaked) {
+              ctx.beginPath();
+              ctx.moveTo(sx, by);
+              ctx.lineTo(sx + sh.w * 0.4, by - sh.h);
+              ctx.lineTo(sx + sh.w, by);
+              ctx.closePath();
+              ctx.fill();
+            } else {
+              ctx.fillRect(sx, by - sh.h, sh.w, sh.h);
+            }
+          });
 
-        // Barrels
-        bgElements.nearBarrels.forEach(br => {
-          const bx = ox + br.x;
-          if (bx < -20 || bx > W + 20) return;
-          ctx.fillStyle = '#0d0810';
-          ctx.beginPath();
-          ctx.ellipse(bx, nearBase - br.r, br.r, br.r * 1.2, 0, 0, Math.PI * 2);
-          ctx.fill();
-          // Rim highlight
-          ctx.strokeStyle = '#1a1220';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.ellipse(bx, nearBase - br.r, br.r, br.r * 0.4, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        });
+          // Crooked smokestacks belching smoke
+          bgSections.slums.farStacks.forEach(st => {
+            const sx = ox + st.x;
+            if (sx + st.w < -20 || sx > W + 20) return;
+            const by = groundBase - 15;
+            ctx.save();
+            ctx.translate(sx + st.w / 2, by);
+            ctx.rotate(st.lean);
+            ctx.fillStyle = '#1a0f14';
+            ctx.fillRect(-st.w / 2, -st.h, st.w, st.h);
+            ctx.restore();
 
-        // Crates
-        bgElements.nearCrates.forEach(cr => {
-          const cx = ox + cr.x;
-          if (cx < -20 || cx > W + 20) return;
-          ctx.fillStyle = '#0d0810';
-          ctx.fillRect(cx, nearBase - cr.s, cr.s, cr.s);
-          // Cross detail
-          ctx.strokeStyle = '#1a1220';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(cx, nearBase - cr.s);
-          ctx.lineTo(cx + cr.s, nearBase);
-          ctx.moveTo(cx + cr.s, nearBase - cr.s);
-          ctx.lineTo(cx, nearBase);
-          ctx.stroke();
-        });
+            // Smoke puffs
+            const smokeY = by - st.h;
+            for (let s = 0; s < 4; s++) {
+              const puffY = smokeY - s * 18 - Math.sin(bgTime * 0.5 + st.x + s) * 8;
+              const puffX = sx + st.w / 2 + Math.sin(bgTime * 0.3 + s * 1.5) * 12;
+              const puffR = 8 + s * 4 + Math.sin(bgTime + s) * 2;
+              ctx.fillStyle = `rgba(40, 30, 35, ${0.3 - s * 0.06})`;
+              ctx.beginPath();
+              ctx.arc(puffX, puffY, puffR, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            // Orange glow at top
+            const glow = ctx.createRadialGradient(sx + st.w / 2, smokeY, 2, sx + st.w / 2, smokeY, 14 + Math.sin(bgTime * 2 + st.x) * 4);
+            glow.addColorStop(0, 'rgba(255, 120, 40, 0.5)');
+            glow.addColorStop(1, 'rgba(255, 80, 20, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(sx + st.w / 2, smokeY, 16, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        // --- Mid layer (0.3x) ---
+        const midOff = -(camX * 0.3) % BG_MID_W;
+        for (let t = -1; t <= Math.ceil(W / BG_MID_W) + 1; t++) {
+          const ox = midOff + t * BG_MID_W;
+
+          // Crowded skaa shacks
+          bgSections.slums.midShacks.forEach(sh => {
+            const sx = ox + sh.x;
+            if (sx + sh.w < -20 || sx > W + 20) return;
+            const by = midBase;
+            ctx.fillStyle = '#221820';
+            if (sh.peaked) {
+              ctx.beginPath();
+              ctx.moveTo(sx, by);
+              ctx.lineTo(sx + sh.w * 0.45, by - sh.h);
+              ctx.lineTo(sx + sh.w, by);
+              ctx.closePath();
+              ctx.fill();
+              ctx.fillRect(sx + 4, by, sh.w - 8, 30);
+            } else {
+              ctx.fillRect(sx, by - sh.h, sh.w, sh.h + 30);
+            }
+          });
+
+          // Flickering amber windows
+          bgSections.slums.midWindows.forEach(win => {
+            const wx = ox + win.x;
+            if (wx < -20 || wx > W + 20) return;
+            const wy = midBase - win.y;
+            const brightness = 0.5 + 0.5 * Math.sin(bgTime * 3 + win.flicker);
+            const alpha = 0.4 + brightness * 0.5;
+            ctx.fillStyle = `rgba(255, 170, 50, ${alpha})`;
+            ctx.fillRect(wx, wy, win.w, win.h);
+            ctx.fillStyle = `rgba(255, 140, 30, ${alpha * 0.25})`;
+            ctx.fillRect(wx - 4, wy - 4, win.w + 8, win.h + 8);
+          });
+
+          // Laundry lines between buildings
+          bgSections.slums.midLaundry.forEach(ll => {
+            const lx1 = ox + ll.x1;
+            const lx2 = ox + ll.x2;
+            if (Math.max(lx1, lx2) < -20 || Math.min(lx1, lx2) > W + 20) return;
+            const ly = midBase - ll.y;
+            ctx.strokeStyle = 'rgba(120, 100, 80, 0.25)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(lx1, ly);
+            // Sag in the middle
+            ctx.quadraticCurveTo((lx1 + lx2) / 2, ly + 8, lx2, ly);
+            ctx.stroke();
+            // Cloth items hanging
+            for (let c = 0; c < ll.clothCount; c++) {
+              const cx = lx1 + (lx2 - lx1) * ((c + 0.5) / ll.clothCount);
+              const cy = ly + 4 + Math.sin(bgTime * 0.8 + ll.phase + c) * 2;
+              ctx.fillStyle = `rgba(${100 + c * 30}, ${80 + c * 20}, ${70 + c * 15}, 0.2)`;
+              ctx.fillRect(cx - 3, cy, 6, 8);
+            }
+          });
+
+          // Wooden scaffolding
+          bgSections.slums.midScaffolding.forEach(sc => {
+            const sx = ox + sc.x;
+            if (sx + sc.w < -20 || sx > W + 20) return;
+            const by = midBase;
+            ctx.strokeStyle = 'rgba(90, 60, 40, 0.3)';
+            ctx.lineWidth = 2;
+            // Vertical poles
+            ctx.beginPath();
+            ctx.moveTo(sx, by); ctx.lineTo(sx, by - sc.h);
+            ctx.moveTo(sx + sc.w, by); ctx.lineTo(sx + sc.w, by - sc.h);
+            ctx.stroke();
+            // Horizontal planks
+            ctx.lineWidth = 1.5;
+            for (let p = 1; p <= 3; p++) {
+              const py = by - sc.h * (p / 3.5);
+              ctx.beginPath();
+              ctx.moveTo(sx, py); ctx.lineTo(sx + sc.w, py);
+              ctx.stroke();
+            }
+          });
+        }
+
+        // --- Near layer (0.6x) ---
+        const nearOff = -(camX * 0.6) % BG_NEAR_W;
+        for (let t = -1; t <= Math.ceil(W / BG_NEAR_W) + 1; t++) {
+          const ox = nearOff + t * BG_NEAR_W;
+
+          // Broken barrels
+          bgSections.slums.nearBarrels.forEach(br => {
+            const bx = ox + br.x;
+            if (bx < -20 || bx > W + 20) return;
+            ctx.fillStyle = '#0d0810';
+            if (br.broken) {
+              ctx.beginPath();
+              ctx.ellipse(bx, nearBase - br.r * 0.5, br.r, br.r * 0.7, 0.2, 0, Math.PI * 2);
+              ctx.fill();
+              // Broken rim
+              ctx.strokeStyle = '#1a1018';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.arc(bx, nearBase - br.r * 0.5, br.r * 0.8, 0.5, 2.5);
+              ctx.stroke();
+            } else {
+              ctx.beginPath();
+              ctx.ellipse(bx, nearBase - br.r, br.r, br.r * 1.2, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          // Crates
+          bgSections.slums.nearCrates.forEach(cr => {
+            const cx = ox + cr.x;
+            if (cx < -20 || cx > W + 20) return;
+            ctx.fillStyle = '#0d0810';
+            ctx.fillRect(cx, nearBase - cr.s, cr.s, cr.s);
+            ctx.strokeStyle = '#1a1220';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, nearBase - cr.s); ctx.lineTo(cx + cr.s, nearBase);
+            ctx.moveTo(cx + cr.s, nearBase - cr.s); ctx.lineTo(cx, nearBase);
+            ctx.stroke();
+          });
+
+          // Puddles (reflective)
+          bgSections.slums.nearPuddles.forEach(pd => {
+            const px = ox + pd.x;
+            if (px < -30 || px > W + 30) return;
+            const shimmer = 0.08 + Math.sin(bgTime * 1.5 + pd.x) * 0.03;
+            ctx.fillStyle = `rgba(80, 70, 90, ${shimmer})`;
+            ctx.beginPath();
+            ctx.ellipse(px, nearBase + 2, pd.w / 2, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Trash heaps
+          bgSections.slums.nearTrash.forEach(tr => {
+            const tx = ox + tr.x;
+            if (tx < -15 || tx > W + 15) return;
+            ctx.fillStyle = '#0a0710';
+            ctx.beginPath();
+            ctx.moveTo(tx - tr.s, nearBase);
+            ctx.lineTo(tx - tr.s * 0.3, nearBase - tr.s);
+            ctx.lineTo(tx + tr.s * 0.5, nearBase - tr.s * 0.7);
+            ctx.lineTo(tx + tr.s, nearBase);
+            ctx.closePath();
+            ctx.fill();
+          });
+        }
+
+        ctx.restore();
       }
-      ctx.restore();
+
+      // ==============================
+      // BORDER BACKGROUND (cols 70-139)
+      // ==============================
+      if (borderAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = borderAlpha;
+
+        // --- Far layer (0.1x) ---
+        const farOff = -(camX * 0.1) % BG_FAR_W;
+        for (let t = -1; t <= Math.ceil(W / BG_FAR_W) + 1; t++) {
+          const ox = farOff + t * BG_FAR_W;
+
+          // Noble architecture - tall stone buildings
+          bgSections.border.farNoble.forEach(nb => {
+            const sx = ox + nb.x;
+            if (sx + nb.w < -30 || sx > W + 30) return;
+            const by = groundBase - 10;
+            ctx.fillStyle = '#151020';
+            ctx.fillRect(sx, by - nb.h, nb.w, nb.h);
+            // Decorative top trim
+            ctx.fillStyle = '#1a1428';
+            ctx.fillRect(sx - 3, by - nb.h, nb.w + 6, 5);
+            // Spire tops
+            for (let s = 0; s < nb.spires; s++) {
+              const spX = sx + nb.w * (s + 1) / (nb.spires + 1);
+              ctx.beginPath();
+              ctx.moveTo(spX - 5, by - nb.h);
+              ctx.lineTo(spX, by - nb.h - 30 - s * 10);
+              ctx.lineTo(spX + 5, by - nb.h);
+              ctx.fill();
+            }
+          });
+
+          // Kredik Shaw - larger, more prominent
+          bgSections.border.farKredik.forEach(ks => {
+            const sx = ox + ks.x;
+            if (sx + ks.w < -50 || sx > W + 50) return;
+            const by = groundBase - 10;
+            ctx.fillStyle = '#10081a';
+            ctx.fillRect(sx, by - ks.h * 0.4, ks.w, ks.h * 0.4);
+            // Many tall spikes
+            for (let s = 0; s < ks.spikes; s++) {
+              const spikeX = sx + (ks.w / (ks.spikes + 1)) * (s + 1);
+              const spikeH = ks.h * (0.5 + Math.sin(s * 1.3) * 0.2);
+              ctx.beginPath();
+              ctx.moveTo(spikeX - 7, by - ks.h * 0.4);
+              ctx.lineTo(spikeX, by - spikeH);
+              ctx.lineTo(spikeX + 7, by - ks.h * 0.4);
+              ctx.fill();
+            }
+            // Faint red glow at base of Kredik Shaw
+            const kGlow = ctx.createRadialGradient(sx + ks.w / 2, by, 20, sx + ks.w / 2, by - 60, 180);
+            kGlow.addColorStop(0, 'rgba(80, 20, 20, 0.15)');
+            kGlow.addColorStop(1, 'rgba(40, 10, 10, 0)');
+            ctx.fillStyle = kGlow;
+            ctx.fillRect(sx - 20, by - ks.h * 0.5, ks.w + 40, ks.h * 0.5);
+          });
+        }
+
+        // --- Mid layer (0.3x) ---
+        const midOff = -(camX * 0.3) % BG_MID_W;
+        for (let t = -1; t <= Math.ceil(W / BG_MID_W) + 1; t++) {
+          const ox = midOff + t * BG_MID_W;
+
+          // Stone walls - fortified
+          bgSections.border.midWalls.forEach(wl => {
+            const sx = ox + wl.x;
+            if (sx + wl.w < -20 || sx > W + 20) return;
+            const by = midBase;
+            ctx.fillStyle = '#1a1525';
+            ctx.fillRect(sx, by - wl.h, wl.w, wl.h + 20);
+            // Stone block pattern
+            ctx.strokeStyle = 'rgba(30, 25, 40, 0.4)';
+            ctx.lineWidth = 1;
+            for (let row = 0; row < Math.floor(wl.h / 8); row++) {
+              const ry = by - wl.h + row * 8;
+              ctx.beginPath();
+              ctx.moveTo(sx, ry); ctx.lineTo(sx + wl.w, ry);
+              ctx.stroke();
+              // Offset brick lines
+              const brickOff = (row % 2) * 15;
+              for (let bx = brickOff; bx < wl.w; bx += 30) {
+                ctx.beginPath();
+                ctx.moveTo(sx + bx, ry); ctx.lineTo(sx + bx, ry + 8);
+                ctx.stroke();
+              }
+            }
+            // Crenellations at top
+            for (let c = 0; c < Math.floor(wl.w / 12); c++) {
+              ctx.fillStyle = '#1a1525';
+              ctx.fillRect(sx + c * 12, by - wl.h - 6, 8, 6);
+            }
+          });
+
+          // Iron gates
+          bgSections.border.midGates.forEach(gt => {
+            const sx = ox + gt.x;
+            if (sx + gt.w < -15 || sx > W + 15) return;
+            const by = midBase;
+            // Gate frame
+            ctx.fillStyle = '#121020';
+            ctx.fillRect(sx, by - gt.h, 4, gt.h);
+            ctx.fillRect(sx + gt.w - 4, by - gt.h, 4, gt.h);
+            ctx.fillRect(sx, by - gt.h, gt.w, 5);
+            // Bars
+            ctx.strokeStyle = '#181428';
+            ctx.lineWidth = 2;
+            for (let b = 6; b < gt.w - 6; b += 6) {
+              ctx.beginPath();
+              ctx.moveTo(sx + b, by - gt.h + 5);
+              ctx.lineTo(sx + b, by);
+              ctx.stroke();
+            }
+          });
+
+          // Guard towers with torchlight
+          bgSections.border.midTowers.forEach(tw => {
+            const sx = ox + tw.x;
+            if (sx + tw.w < -20 || sx > W + 20) return;
+            const by = midBase;
+            ctx.fillStyle = '#161225';
+            ctx.fillRect(sx, by - tw.h, tw.w, tw.h + 15);
+            // Tower top wider
+            ctx.fillRect(sx - 4, by - tw.h, tw.w + 8, 6);
+            // Torch glow (blue-grey)
+            const torchBright = 0.5 + 0.3 * Math.sin(bgTime * 4 + tw.torchPhase);
+            const tGlow = ctx.createRadialGradient(sx + tw.w / 2, by - tw.h + 3, 2, sx + tw.w / 2, by - tw.h + 3, 20);
+            tGlow.addColorStop(0, `rgba(140, 160, 200, ${torchBright * 0.4})`);
+            tGlow.addColorStop(1, 'rgba(100, 120, 160, 0)');
+            ctx.fillStyle = tGlow;
+            ctx.beginPath();
+            ctx.arc(sx + tw.w / 2, by - tw.h + 3, 22, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        // --- Near layer (0.6x) ---
+        const nearOff = -(camX * 0.6) % BG_NEAR_W;
+        for (let t = -1; t <= Math.ceil(W / BG_NEAR_W) + 1; t++) {
+          const ox = nearOff + t * BG_NEAR_W;
+
+          // Iron fences - pointed tops
+          ctx.fillStyle = '#0a0815';
+          bgSections.border.nearFences.forEach(fp => {
+            const fx = ox + fp.x;
+            if (fx < -10 || fx > W + 10) return;
+            // Pointed iron fence post
+            ctx.fillRect(fx, nearBase - 30, 3, 35);
+            ctx.beginPath();
+            ctx.moveTo(fx - 1, nearBase - 30);
+            ctx.lineTo(fx + 1.5, nearBase - 38);
+            ctx.lineTo(fx + 4, nearBase - 30);
+            ctx.fill();
+          });
+          // Horizontal fence rail
+          ctx.strokeStyle = '#0a0815';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(ox, nearBase - 20); ctx.lineTo(ox + BG_NEAR_W, nearBase - 20);
+          ctx.moveTo(ox, nearBase - 10); ctx.lineTo(ox + BG_NEAR_W, nearBase - 10);
+          ctx.stroke();
+
+          // Stone pillars
+          bgSections.border.nearPillars.forEach(pl => {
+            const px = ox + pl.x;
+            if (px < -15 || px > W + 15) return;
+            ctx.fillStyle = '#0c0a18';
+            ctx.fillRect(px, nearBase - pl.h, pl.w, pl.h);
+            // Capital at top
+            ctx.fillRect(px - 2, nearBase - pl.h, pl.w + 4, 4);
+            ctx.fillRect(px - 1, nearBase - pl.h + 4, pl.w + 2, 2);
+          });
+
+          // Posted proclamations (small rectangles on walls)
+          bgSections.border.nearPostings.forEach(pp => {
+            const px = ox + pp.x;
+            if (px < -10 || px > W + 10) return;
+            ctx.fillStyle = 'rgba(60, 55, 50, 0.15)';
+            ctx.fillRect(px, nearBase - 22, 8, 10);
+          });
+        }
+
+        ctx.restore();
+      }
+
+      // ==============================
+      // DEAD END BACKGROUND (cols 140-199)
+      // ==============================
+      if (deadAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = deadAlpha;
+
+        // --- Far layer (0.1x) - Towering walls closing in ---
+        const farOff = -(camX * 0.1) % BG_FAR_W;
+        for (let t = -1; t <= Math.ceil(W / BG_FAR_W) + 1; t++) {
+          const ox = farOff + t * BG_FAR_W;
+
+          bgSections.deadEnd.farWalls.forEach(wl => {
+            const sx = ox + wl.x;
+            if (sx + wl.w < -30 || sx > W + 30) return;
+            ctx.fillStyle = '#08060e';
+            ctx.fillRect(sx, groundBase - wl.h, wl.w, wl.h + 50);
+            // Barely visible stone texture
+            ctx.strokeStyle = 'rgba(20, 16, 28, 0.3)';
+            ctx.lineWidth = 1;
+            for (let row = 0; row < Math.floor(wl.h / 12); row++) {
+              const ry = groundBase - wl.h + row * 12;
+              ctx.beginPath();
+              ctx.moveTo(sx, ry); ctx.lineTo(sx + wl.w, ry);
+              ctx.stroke();
+            }
+          });
+        }
+
+        // Very narrow sky visible - dark strip at top
+        ctx.fillStyle = 'rgba(15, 10, 20, 0.6)';
+        ctx.fillRect(0, 0, W, H * 0.15);
+
+        // Faint moonlight strip
+        const moonGlow = ctx.createLinearGradient(W * 0.3, 0, W * 0.7, 0);
+        moonGlow.addColorStop(0, 'rgba(60, 55, 80, 0)');
+        moonGlow.addColorStop(0.5, 'rgba(60, 55, 80, 0.06)');
+        moonGlow.addColorStop(1, 'rgba(60, 55, 80, 0)');
+        ctx.fillStyle = moonGlow;
+        ctx.fillRect(0, 0, W, H * 0.3);
+
+        // --- Mid layer (0.3x) - pipes, boarded windows, cracks ---
+        const midOff = -(camX * 0.3) % BG_MID_W;
+        for (let t = -1; t <= Math.ceil(W / BG_MID_W) + 1; t++) {
+          const ox = midOff + t * BG_MID_W;
+
+          // Dripping pipes
+          bgSections.deadEnd.midPipes.forEach(pp => {
+            const px = ox + pp.x;
+            if (px < -40 || px > W + 40) return;
+            const py = midBase - pp.y;
+            ctx.strokeStyle = 'rgba(40, 35, 50, 0.4)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(px, py); ctx.lineTo(px + pp.len, py);
+            ctx.stroke();
+            // Drip animation
+            const dripY = py + ((bgTime * 30 + pp.dripPhase * 50) % 40);
+            const dripAlpha = 1 - ((bgTime * 30 + pp.dripPhase * 50) % 40) / 40;
+            ctx.fillStyle = `rgba(60, 55, 80, ${dripAlpha * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(px + pp.len * 0.6, dripY, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Boarded-up windows
+          bgSections.deadEnd.midBoarded.forEach(bw => {
+            const bx = ox + bw.x;
+            if (bx < -20 || bx > W + 20) return;
+            const by = midBase - bw.y;
+            // Dark window hole
+            ctx.fillStyle = '#040308';
+            ctx.fillRect(bx, by, bw.w, bw.h);
+            // Boards across
+            ctx.strokeStyle = 'rgba(50, 35, 30, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bx - 1, by + 2); ctx.lineTo(bx + bw.w + 1, by + bw.h - 2);
+            ctx.moveTo(bx - 1, by + bw.h - 2); ctx.lineTo(bx + bw.w + 1, by + 2);
+            ctx.stroke();
+          });
+
+          // Wall cracks
+          bgSections.deadEnd.midCracks.forEach(cr => {
+            const cx = ox + cr.x;
+            if (cx < -20 || cx > W + 20) return;
+            const cy = midBase - cr.y;
+            ctx.strokeStyle = 'rgba(25, 20, 35, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(cr.angle) * cr.len, cy + Math.sin(cr.angle) * cr.len);
+            // Branch
+            ctx.lineTo(cx + Math.cos(cr.angle + 0.5) * cr.len * 0.6, cy + Math.sin(cr.angle + 0.5) * cr.len * 0.6);
+            ctx.stroke();
+          });
+
+          // Mist creeping in from edges at mid level
+          for (let m = 0; m < 3; m++) {
+            const mistX = ox + m * 350;
+            const mistAlpha = 0.04 + Math.sin(bgTime * 0.3 + m) * 0.02;
+            const mistGrad = ctx.createRadialGradient(mistX, midBase, 10, mistX, midBase, 80);
+            mistGrad.addColorStop(0, `rgba(100, 95, 120, ${mistAlpha})`);
+            mistGrad.addColorStop(1, 'rgba(80, 75, 100, 0)');
+            ctx.fillStyle = mistGrad;
+            ctx.beginPath();
+            ctx.arc(mistX, midBase, 80, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // --- Near layer (0.6x) - chains, crates, rats, mist tendrils ---
+        const nearOff = -(camX * 0.6) % BG_NEAR_W;
+        for (let t = -1; t <= Math.ceil(W / BG_NEAR_W) + 1; t++) {
+          const ox = nearOff + t * BG_NEAR_W;
+
+          // Broken crates
+          bgSections.deadEnd.nearCrates.forEach(cr => {
+            const cx = ox + cr.x;
+            if (cx < -20 || cx > W + 20) return;
+            ctx.fillStyle = '#060410';
+            if (cr.broken) {
+              // Broken - tilted, partial
+              ctx.save();
+              ctx.translate(cx + cr.s / 2, nearBase - cr.s / 2);
+              ctx.rotate(0.2);
+              ctx.fillRect(-cr.s / 2, -cr.s / 2, cr.s, cr.s * 0.7);
+              ctx.restore();
+            } else {
+              ctx.fillRect(cx, nearBase - cr.s, cr.s, cr.s);
+            }
+          });
+
+          // Chains hanging from walls
+          bgSections.deadEnd.nearChains.forEach(ch => {
+            const cx = ox + ch.x;
+            if (cx < -15 || cx > W + 15) return;
+            const sway = Math.sin(bgTime * 0.4 + ch.swayPhase) * 5;
+            ctx.strokeStyle = 'rgba(50, 45, 60, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // Chain links as connected arcs
+            const startY = nearBase - 40;
+            for (let l = 0; l < Math.floor(ch.len / 6); l++) {
+              const ly = startY + l * 6;
+              const lx = cx + sway * (l / Math.floor(ch.len / 6));
+              if (l % 2 === 0) {
+                ctx.moveTo(lx - 2, ly);
+                ctx.arc(lx, ly + 3, 3, -Math.PI / 2, Math.PI * 1.5, false);
+              }
+            }
+            ctx.stroke();
+          });
+
+          // Mist tendrils at ground level
+          for (let m = 0; m < 5; m++) {
+            const mx = ox + m * 150 + Math.sin(bgTime * 0.2 + m) * 30;
+            const my = nearBase + 5;
+            const mAlpha = 0.06 + Math.sin(bgTime * 0.5 + m * 1.5) * 0.03;
+            ctx.strokeStyle = `rgba(120, 115, 140, ${mAlpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < 20; i++) {
+              const px = mx + i * 6;
+              const py = my + Math.sin(bgTime * 0.6 + m + i * 0.4) * 4;
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+          }
+
+          // Occasional red glow (danger)
+          const redPhase = Math.sin(bgTime * 0.8) * 0.5 + 0.5;
+          if (redPhase > 0.7) {
+            const rglow = ctx.createRadialGradient(ox + 350, midBase - 20, 5, ox + 350, midBase - 20, 60);
+            rglow.addColorStop(0, `rgba(120, 20, 10, ${(redPhase - 0.7) * 0.15})`);
+            rglow.addColorStop(1, 'rgba(80, 10, 5, 0)');
+            ctx.fillStyle = rglow;
+            ctx.beginPath();
+            ctx.arc(ox + 350, midBase - 20, 60, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
     }
 
     // --- Ash Particle System ---
@@ -4327,30 +4823,31 @@
           }
           break;
 
-        case 3: // Camera pans up to rooftop
+        case 3: // Fade to cinematic black, then reveal Kelsier
           {
-            const panDuration = 2;
-            const t = Math.min(endingTimer / panDuration, 1);
-            const eased = t * t * (3 - 2 * t); // smoothstep
-            camera.y = camera.y + (endingCameraPanTarget - camera.y) * 0.03;
-            if (endingTimer > panDuration) {
+            // Fade tile rendering to black over 2 seconds
+            endingCinematicFade = Math.min(1, endingCinematicFade + dt * 0.5);
+            if (endingTimer > 2.5) {
               endingPhase = 4;
               endingTimer = 0;
               endingText = endingTexts[2];
               endingCharIndex = 0;
               endingCharTimer = 0;
               endingDisplayedText = '';
+              endingCinematicFade = 1;
+              endingKelsierReveal = 0;
             }
           }
           break;
 
-        case 4: // Kelsier silhouette + "Someone was watching."
+        case 4: // Kelsier cinematic reveal + "Someone was watching."
           {
+            endingKelsierReveal = Math.min(1, (endingKelsierReveal || 0) + dt * 0.4);
             const tw = typewriterUpdate(endingText, endingCharIndex, endingCharTimer, dt, 0.04);
             endingCharIndex = tw.charIndex;
             endingCharTimer = tw.charTimer;
             endingDisplayedText = endingText.substring(0, endingCharIndex);
-            if (endingCharIndex >= endingText.length && endingTimer > 3) {
+            if (endingCharIndex >= endingText.length && endingTimer > 4) {
               endingPhase = 5;
               endingTimer = 0;
             }
@@ -4367,61 +4864,175 @@
     }
 
     function renderKelsierSilhouette() {
-      // Draw Kelsier on the rooftop (around col 190, row 7 area)
-      const kx = 190 * TILE - camera.x;
-      const ky = 7 * TILE - camera.y - 48; // standing on rooftop
+      // Full-screen cinematic Kelsier reveal - NOT in game world
+      const W = canvas.width;
+      const H = canvas.height;
+      const reveal = endingKelsierReveal || 0;
 
       ctx.save();
-      ctx.fillStyle = '#0a0a12';
 
-      // Body - broad shoulders, confident stance
+      // Dark cinematic background
+      ctx.fillStyle = '#050308';
+      ctx.fillRect(0, 0, W, H);
+
+      // Ashy sky visible at top - dark but with subtle color
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.45);
+      skyGrad.addColorStop(0, '#2a1520');
+      skyGrad.addColorStop(0.4, '#1a0e18');
+      skyGrad.addColorStop(1, '#080510');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, H * 0.45);
+
+      // Rooftop ledge silhouette
+      const ledgeY = H * 0.62;
+      ctx.fillStyle = '#0a0812';
+      ctx.fillRect(0, ledgeY, W, H - ledgeY);
+      // Ledge edge detail
+      ctx.fillStyle = '#0e0b16';
+      ctx.fillRect(0, ledgeY, W, 4);
+
+      // Kelsier silhouette - centered, large, dramatic
+      const kx = W / 2;
+      const scale = Math.min(W, H) / 320; // scale relative to screen size
+      const ky = ledgeY; // standing ON the ledge
+      const kAlpha = reveal; // fade in
+
+      ctx.globalAlpha = kAlpha;
+
+      // --- MISTCLOAK flowing tendrils (behind body) ---
+      ctx.fillStyle = '#0e0a14';
+      // Left cloak tendrils
+      for (let i = 0; i < 6; i++) {
+        const tendrilX = kx - 18 * scale - i * 6 * scale;
+        const tendrilLen = (40 + i * 12) * scale;
+        const sway = Math.sin(bgTime * 0.6 + i * 0.8) * 8 * scale;
+        const sway2 = Math.sin(bgTime * 0.4 + i * 1.2) * 4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(kx - 14 * scale, ky - 50 * scale);
+        ctx.quadraticCurveTo(tendrilX + sway2, ky - 20 * scale, tendrilX + sway, ky + tendrilLen - 50 * scale);
+        ctx.lineTo(tendrilX + sway + 3 * scale, ky + tendrilLen - 50 * scale);
+        ctx.quadraticCurveTo(tendrilX + 4 * scale + sway2, ky - 18 * scale, kx - 10 * scale, ky - 48 * scale);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Right cloak tendrils
+      for (let i = 0; i < 6; i++) {
+        const tendrilX = kx + 18 * scale + i * 6 * scale;
+        const tendrilLen = (40 + i * 12) * scale;
+        const sway = Math.sin(bgTime * 0.6 + i * 0.8 + 3) * 8 * scale;
+        const sway2 = Math.sin(bgTime * 0.4 + i * 1.2 + 3) * 4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(kx + 14 * scale, ky - 50 * scale);
+        ctx.quadraticCurveTo(tendrilX + sway2, ky - 20 * scale, tendrilX + sway, ky + tendrilLen - 50 * scale);
+        ctx.lineTo(tendrilX + sway - 3 * scale, ky + tendrilLen - 50 * scale);
+        ctx.quadraticCurveTo(tendrilX - 4 * scale + sway2, ky - 18 * scale, kx + 10 * scale, ky - 48 * scale);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // --- Body silhouette ---
+      ctx.fillStyle = '#0a0810';
+
+      // Legs - confident wide stance
+      ctx.fillRect(kx - 10 * scale, ky - 22 * scale, 8 * scale, 22 * scale);
+      ctx.fillRect(kx + 2 * scale, ky - 22 * scale, 8 * scale, 22 * scale);
+
       // Torso
-      ctx.fillRect(kx - 10, ky + 16, 20, 20);
-      // Shoulders (broad)
-      ctx.fillRect(kx - 16, ky + 16, 32, 6);
+      ctx.fillRect(kx - 12 * scale, ky - 52 * scale, 24 * scale, 30 * scale);
+
+      // Shoulders (broad, confident)
+      ctx.fillRect(kx - 18 * scale, ky - 52 * scale, 36 * scale, 8 * scale);
+
+      // Arms relaxed at sides, slightly away from body
+      // Left arm
+      ctx.save();
+      ctx.translate(kx - 18 * scale, ky - 48 * scale);
+      ctx.rotate(-0.12);
+      ctx.fillRect(0, 0, 7 * scale, 26 * scale);
+      ctx.restore();
+      // Right arm
+      ctx.save();
+      ctx.translate(kx + 11 * scale, ky - 48 * scale);
+      ctx.rotate(0.12);
+      ctx.fillRect(0, 0, 7 * scale, 26 * scale);
+      ctx.restore();
+
+      // Neck
+      ctx.fillRect(kx - 4 * scale, ky - 58 * scale, 8 * scale, 8 * scale);
+
       // Head
       ctx.beginPath();
-      ctx.arc(kx, ky + 10, 8, 0, Math.PI * 2);
-      ctx.fill();
-      // Hair - messy spikes going up
-      ctx.beginPath();
-      ctx.moveTo(kx - 6, ky + 4);
-      ctx.lineTo(kx - 3, ky - 6);
-      ctx.lineTo(kx, ky + 2);
-      ctx.lineTo(kx + 2, ky - 8);
-      ctx.lineTo(kx + 5, ky + 1);
-      ctx.lineTo(kx + 7, ky - 5);
-      ctx.lineTo(kx + 8, ky + 4);
-      ctx.closePath();
-      ctx.fill();
-      // Arms crossed
-      ctx.fillRect(kx - 16, ky + 22, 12, 5);
-      ctx.fillRect(kx + 4, ky + 22, 12, 5);
-      // Forearms crossed over chest
-      ctx.fillRect(kx - 8, ky + 26, 16, 4);
-      // Legs
-      ctx.fillRect(kx - 8, ky + 36, 7, 14);
-      ctx.fillRect(kx + 1, ky + 36, 7, 14);
-      // Mistcloak tails flowing
-      ctx.beginPath();
-      ctx.moveTo(kx - 16, ky + 22);
-      ctx.lineTo(kx - 20, ky + 50);
-      ctx.lineTo(kx - 14, ky + 46);
-      ctx.lineTo(kx - 18, ky + 54);
-      ctx.lineTo(kx - 10, ky + 36);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(kx + 16, ky + 22);
-      ctx.lineTo(kx + 20, ky + 50);
-      ctx.lineTo(kx + 14, ky + 46);
-      ctx.lineTo(kx + 18, ky + 54);
-      ctx.lineTo(kx + 10, ky + 36);
+      ctx.arc(kx, ky - 66 * scale, 10 * scale, 0, Math.PI * 2);
       ctx.fill();
 
-      // Glint for smile - small bright highlight
-      ctx.fillStyle = '#e8e0d0';
-      ctx.globalAlpha = 0.5 + Math.sin(endingTimer * 2) * 0.3;
-      ctx.fillRect(kx - 3, ky + 13, 6, 1);
+      // Hair - messy, some sticking up (Kelsier's signature look)
+      ctx.beginPath();
+      ctx.moveTo(kx - 9 * scale, ky - 74 * scale);
+      ctx.lineTo(kx - 5 * scale, ky - 86 * scale);
+      ctx.lineTo(kx - 2 * scale, ky - 76 * scale);
+      ctx.lineTo(kx + 1 * scale, ky - 90 * scale);
+      ctx.lineTo(kx + 4 * scale, ky - 78 * scale);
+      ctx.lineTo(kx + 7 * scale, ky - 84 * scale);
+      ctx.lineTo(kx + 10 * scale, ky - 74 * scale);
+      ctx.closePath();
+      ctx.fill();
+      // Side hair
+      ctx.beginPath();
+      ctx.moveTo(kx - 11 * scale, ky - 68 * scale);
+      ctx.lineTo(kx - 14 * scale, ky - 72 * scale);
+      ctx.lineTo(kx - 10 * scale, ky - 62 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(kx + 11 * scale, ky - 68 * scale);
+      ctx.lineTo(kx + 14 * scale, ky - 72 * scale);
+      ctx.lineTo(kx + 10 * scale, ky - 62 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      // --- Smile glint --- a small bright highlight on his face
+      ctx.fillStyle = '#e8dcc8';
+      const glintAlpha = (0.4 + Math.sin(bgTime * 1.5) * 0.3) * reveal;
+      ctx.globalAlpha = glintAlpha;
+      ctx.fillRect(kx - 3 * scale, ky - 61 * scale, 6 * scale, 1.5 * scale);
+      // Eye glints
+      ctx.globalAlpha = glintAlpha * 0.6;
+      ctx.fillRect(kx - 5 * scale, ky - 67 * scale, 2 * scale, 1 * scale);
+      ctx.fillRect(kx + 3 * scale, ky - 67 * scale, 2 * scale, 1 * scale);
+
+      ctx.globalAlpha = kAlpha;
+
+      // --- Mist swirling around him ---
+      for (let m = 0; m < 12; m++) {
+        const angle = bgTime * 0.3 + m * (Math.PI * 2 / 12);
+        const radius = (30 + m * 8 + Math.sin(bgTime * 0.5 + m) * 10) * scale;
+        const mx = kx + Math.cos(angle) * radius;
+        const my = ky - 40 * scale + Math.sin(angle) * radius * 0.3;
+        const mistAlpha = 0.03 + Math.sin(bgTime * 0.7 + m * 2) * 0.015;
+        ctx.strokeStyle = `rgba(140, 135, 160, ${mistAlpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const px = mx + i * 4 * scale;
+          const py = my + Math.sin(bgTime * 0.8 + m + i * 0.5) * 3 * scale;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+
+      // Ground mist around his feet
+      for (let m = 0; m < 8; m++) {
+        const mx = kx + (m - 4) * 20 * scale + Math.sin(bgTime * 0.3 + m) * 10 * scale;
+        const my = ky - 2 * scale;
+        const mGrad = ctx.createRadialGradient(mx, my, 2, mx, my, 20 * scale);
+        mGrad.addColorStop(0, `rgba(100, 95, 120, ${0.06 * reveal})`);
+        mGrad.addColorStop(1, 'rgba(80, 75, 100, 0)');
+        ctx.fillStyle = mGrad;
+        ctx.beginPath();
+        ctx.arc(mx, my, 20 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.restore();
     }
@@ -4451,8 +5062,17 @@
         ctx.restore();
       }
 
-      // Kelsier silhouette during phases 4+
-      if (endingPhase >= 4) {
+      // Cinematic fade to black during phase 3+ (hides tile world)
+      if (endingCinematicFade > 0) {
+        ctx.save();
+        ctx.globalAlpha = endingCinematicFade;
+        ctx.fillStyle = '#050308';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      // Kelsier cinematic reveal during phase 4+
+      if (endingPhase >= 4 && endingPhase < 5) {
         renderKelsierSilhouette();
       }
 
@@ -4586,6 +5206,8 @@
       endingPulseTimer = 0;
       endingCameraPanTarget = 0;
       endingFadeAlpha = 0;
+      endingCinematicFade = 0;
+      endingKelsierReveal = 0;
       endingGuardsCleared = false;
       endingTextStarted = false;
       // Reset completion state
@@ -4641,6 +5263,8 @@
         endingVignetteAlpha = 0;
         endingPulseTimer = 0;
         endingFadeAlpha = 0;
+        endingCinematicFade = 0;
+        endingKelsierReveal = 0;
         endingGuardsCleared = false;
       endingTextStarted = false;
       }
