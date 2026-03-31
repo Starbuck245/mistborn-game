@@ -476,7 +476,31 @@
     }
 
     // --- Game State System ---
-    let gameState = 'title'; // 'title', 'opening', 'controls', 'playing', 'ending', 'complete'
+    let gameState = 'title'; // 'title', 'opening', 'controls', 'playing', 'transition', 'ending', 'complete'
+
+    // --- Section Transition Cutscene State ---
+    let transitionPhase = 0; // 0=fade out, 1=text, 2=fade in
+    let transitionTimer = 0;
+    let transitionTextIndex = 0;
+    let transitionCharIndex = 0;
+    let transitionCharTimer = 0;
+    let transitionDisplayedText = '';
+    let transitionFadeAlpha = 0;
+    let transitionTriggered = { slumsToBorder: false, borderToDeadEnd: false };
+    const transitionTexts = {
+      slumsToBorder: [
+        "The ash thickened as Vin left the slums behind.",
+        "Ahead, the garrison walls loomed — the boundary between skaa misery and noble territory.",
+        "She could feel the metals burning inside her. She was getting stronger.",
+        "But so were the enemies ahead..."
+      ],
+      borderToDeadEnd: [
+        "The patrols grew denser. Garrison soldiers everywhere.",
+        "Vin pressed on. There was no turning back now.",
+        "Somewhere in the mists, she felt it — someone was watching her.",
+        "Someone powerful."
+      ]
+    };
 
     // --- Title Screen State ---
     let titleTimer = 0;
@@ -734,13 +758,22 @@
     }
 
     // --- Opening Cutscene ---
-    const openingLines = [
-      "The ash falls. It always falls.",
-      "Vin pulled her cloak tighter and kept to the shadows.",
-      "The streets of Luthadel were no place for a girl alone.",
-      "But she had nowhere else to go."
+    const openingScreens = [
+      {
+        lines: [
+          "A thousand years ago, the Lord Ruler rose to power.",
+          "He claimed to have saved the world. Instead, he broke it.",
+          "Now ash falls from the sky. The sun is a dull red smear.",
+          "The skaa toil as slaves.",
+          "No one dares resist the Final Empire."
+        ],
+        pauses: [0.8, 0.8, 0.8, 0.8, 0]
+      }
     ];
-    const openingPauses = [0.8, 0.8, 1.0, 0]; // pause after each line
+    let openingScreen = 0;
+    let openingScreenFade = 0; // 0=not fading, >0 fading between screens
+    const openingLines = openingScreens[0].lines;
+    const openingPauses = openingScreens[0].pauses;
     let openingTimer = 0;
     let openingFadeIn = 0; // 0-1 fade from black
     let openingLineIndex = 0;
@@ -830,8 +863,7 @@
       // Another gap (cols 30-32)
       fillRect(30, 17, 32, 19, 0);
 
-      // Floating platform (cols 30-32, row 13)
-      fillRect(30, 13, 32, 13, 1);
+      // (platform removed — open gap for player to fall through)
 
       // Raised section (cols 34-40, rows 15-16)
       fillRect(34, 15, 40, 16, 1);
@@ -901,21 +933,21 @@
 
       // Gap (cols 90-92)
       fillRect(90, 17, 92, 19, 0);
-      // Stepping stones: descend from tall section or cross at ground
-      fillRect(90, 15, 90, 15, 1);  // high step
-      fillRect(91, 14, 91, 14, 1);  // mid step
-      fillRect(92, 15, 92, 15, 1);  // landing
+      // (stepping stones removed — open hole for player to fall through)
 
       // --- Area 3: Tower with clear stairs (cols 93-103) ---
-      // Ground continues (cols 93-97)
-      fillRect(93, 15, 97, 16, 1);
+      // Ground continues (cols 93-94 only — hole at 95-97)
+      fillRect(93, 15, 94, 16, 1);
+      // Hole at cols 95-97 (remove ground so Vin can fall in)
+      fillRect(95, 15, 97, 19, 0);
+      // Floor at bottom of pit so she doesn't die
+      fillRect(95, 19, 97, 19, 1);
       // Tower (cols 98-101, rows 8-16) — BUT with ledges on left face
       fillRect(98, 8, 101, 16, 1);
-      // Clear staircase ledges protruding from left face (2 tiles wide, 2 rows apart)
-      fillRect(96, 15, 97, 15, 1);  // ground approach
-      fillRect(96, 13, 97, 13, 1);  // step 1
-      fillRect(96, 11, 97, 11, 1);  // step 2
-      fillRect(96, 9, 97, 9, 1);    // step 3 — reach roof
+      // Staircase — graduated widths (bottom longest, top shortest)
+      fillRect(94, 13, 97, 13, 1);  // step 1 (bottom) — 4 wide
+      fillRect(95, 11, 97, 11, 1);  // step 2 (middle) — 3 wide
+      fillRect(96, 9, 97, 9, 1);    // step 3 (top) — 2 wide, reach roof
       // Descend on right side
       fillRect(102, 11, 103, 11, 1); // ledge right
       fillRect(102, 13, 103, 13, 1); // ledge right lower
@@ -2464,11 +2496,12 @@
           const tx = c * TILE;
           if (enemy.vx > 0) {
             enemy.x = tx - enemy.width;
-            enemy.vx = 0;
           } else if (enemy.vx < 0) {
             enemy.x = tx + TILE;
-            enemy.vx = 0;
           }
+          // Reverse direction instead of stopping
+          enemy.facing *= -1;
+          enemy.vx = enemy.facing * enemy.speed;
           return;
         }
       }
@@ -2952,10 +2985,10 @@
           }
         }
 
-        // Don't walk off edges
+        // Don't walk off edges — reverse direction but keep moving
         if (e.onGround && !hasGroundAhead(e)) {
           e.facing *= -1;
-          e.vx = 0;
+          e.vx = e.facing * e.speed;
         }
 
         // Apply gravity
@@ -4110,87 +4143,92 @@
 
     // --- HUD Rendering ---
     function renderHUD() {
-      // Top-left: Health vials — narrow glass vials with cork stoppers
-      const vialX = 15;
-      const vialY = 15;
-      for (let i = 0; i < player.maxHp; i++) {
-        const x = vialX + i * 14;
-        const y = vialY;
-        const full = i < player.hp;
-        const draining = (i === player.hp && player.vialDrainAnim > 0);
+      const W = canvas.width;
+      const H = canvas.height;
 
-        // Vial shape: 6px wide, 14px tall body
-        // Thin neck (2px wide, 3px tall) at top, wider base (6px wide, 9px tall)
-        const neckX = x + 2;   // neck left
-        const neckY = y + 2;   // neck top
-        const neckW = 2;
-        const neckH = 3;
-        const bodyX = x;       // body left
-        const bodyY = y + 5;   // body top (below neck)
-        const bodyW = 6;
-        const bodyH = 9;
+      // --- Right side: Vertical Health bar (top) + Luck bar (below) ---
+      const barW = 8;
+      const barH = 80;
+      const barX = W - 22;
+      const barGap = 14;
 
-        // Cork stopper at top
-        ctx.fillStyle = '#8a6a4a';
-        ctx.fillRect(neckX - 0.5, y, neckW + 1, 2);
-        // Cork highlight
-        ctx.fillStyle = '#a08060';
-        ctx.fillRect(neckX, y, 1, 1);
-
-        if (full) {
-          // Glass neck outline
-          ctx.fillStyle = 'rgba(136,187,238,0.3)';
-          ctx.fillRect(neckX, neckY, neckW, neckH);
-          // Body filled with silver-blue liquid
-          ctx.fillStyle = '#88bbee';
-          ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
-          // Liquid shine streak (white highlight on left side)
-          ctx.fillStyle = 'rgba(255,255,255,0.5)';
-          ctx.fillRect(bodyX + 1, bodyY + 1, 1, bodyH - 2);
-          // Subtle second highlight
-          ctx.fillStyle = 'rgba(255,255,255,0.2)';
-          ctx.fillRect(bodyX + 2, bodyY + 2, 1, bodyH - 4);
-          // Glass rim at top of body
-          ctx.fillStyle = 'rgba(200,220,240,0.4)';
-          ctx.fillRect(bodyX, bodyY, bodyW, 1);
-          // Glass outline
-          ctx.strokeStyle = 'rgba(100,140,180,0.5)';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(neckX - 0.25, neckY, neckW + 0.5, neckH);
-          ctx.strokeRect(bodyX - 0.25, bodyY, bodyW + 0.5, bodyH);
-        } else if (draining) {
-          // Draining animation
-          const drainPct = player.vialDrainAnim;
-          // Glass outline
-          ctx.strokeStyle = 'rgba(60,60,60,0.6)';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(neckX - 0.25, neckY, neckW + 0.5, neckH);
-          ctx.strokeRect(bodyX - 0.25, bodyY, bodyW + 0.5, bodyH);
-          // Partial fill from bottom
-          const fillH = Math.floor(bodyH * drainPct);
-          if (fillH > 0) {
-            ctx.fillStyle = '#88bbee';
-            ctx.globalAlpha = 0.7;
-            ctx.fillRect(bodyX, bodyY + (bodyH - fillH), bodyW, fillH);
-            // Shine
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            ctx.fillRect(bodyX + 1, bodyY + (bodyH - fillH) + 1, 1, Math.max(0, fillH - 2));
-            ctx.globalAlpha = 1;
-          }
-        } else {
-          // Empty vial - dark glass outline only
-          ctx.strokeStyle = 'rgba(60,60,60,0.6)';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(neckX - 0.25, neckY, neckW + 0.5, neckH);
-          ctx.strokeRect(bodyX - 0.25, bodyY, bodyW + 0.5, bodyH);
-          // Slight glass tint inside
-          ctx.fillStyle = 'rgba(50,50,60,0.15)';
-          ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
-        }
+      // Health bar
+      const hpY = 20;
+      const hpPct = player.hp / player.maxHp;
+      // Label
+      ctx.save();
+      ctx.fillStyle = '#88bbee';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('HP', barX + barW / 2, hpY - 4);
+      // Background
+      ctx.fillStyle = 'rgba(40, 40, 50, 0.6)';
+      ctx.fillRect(barX, hpY, barW, barH);
+      // Fill (from bottom up)
+      const hpFillH = barH * hpPct;
+      if (hpPct > 0) {
+        const hpGrad = ctx.createLinearGradient(0, hpY + barH - hpFillH, 0, hpY + barH);
+        hpGrad.addColorStop(0, '#88bbee');
+        hpGrad.addColorStop(1, '#5588bb');
+        ctx.fillStyle = hpGrad;
+        ctx.fillRect(barX, hpY + barH - hpFillH, barW, hpFillH);
+        // Shine
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(barX + 1, hpY + barH - hpFillH + 1, 2, hpFillH - 2);
       }
+      // Segment lines (one per HP point)
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 0.5;
+      for (let i = 1; i < player.maxHp; i++) {
+        const sy = hpY + (barH / player.maxHp) * i;
+        ctx.beginPath();
+        ctx.moveTo(barX, sy);
+        ctx.lineTo(barX + barW, sy);
+        ctx.stroke();
+      }
+      // Border
+      ctx.strokeStyle = 'rgba(100,140,180,0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, hpY, barW, barH);
+      ctx.restore();
 
-      // Top-right: Boxing (coin) count
-      const coinX = canvas.width - 80;
+      // Luck bar
+      const luckY = hpY + barH + barGap;
+      const luckPct = player.luckCooldown <= 0 ? 1 : 1 - (player.luckCooldown / player.luckMaxCooldown);
+      // Label
+      ctx.save();
+      ctx.fillStyle = '#9988bb';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('LK', barX + barW / 2, luckY - 4);
+      // Background
+      ctx.fillStyle = 'rgba(40, 40, 50, 0.6)';
+      ctx.fillRect(barX, luckY, barW, barH);
+      // Fill (from bottom up)
+      const lkFillH = barH * luckPct;
+      if (luckPct > 0) {
+        const lkGrad = ctx.createLinearGradient(0, luckY + barH - lkFillH, 0, luckY + barH);
+        lkGrad.addColorStop(0, '#6644aa');
+        lkGrad.addColorStop(1, '#442288');
+        ctx.fillStyle = lkGrad;
+        ctx.fillRect(barX, luckY + barH - lkFillH, barW, lkFillH);
+        // Shine
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(barX + 1, luckY + barH - lkFillH + 1, 2, lkFillH - 2);
+      }
+      // "READY" glow when full
+      if (player.luckCooldown <= 0) {
+        ctx.fillStyle = `rgba(102, 68, 170, ${0.15 + Math.sin(bgTime * 3) * 0.1})`;
+        ctx.fillRect(barX - 2, luckY - 2, barW + 4, barH + 4);
+      }
+      // Border
+      ctx.strokeStyle = 'rgba(100, 80, 150, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, luckY, barW, barH);
+      ctx.restore();
+
+      // --- Top-left: Boxing (coin) count ---
+      const coinX = 22;
       const coinY = 22;
       // Gold coin icon
       ctx.fillStyle = '#daa520';
@@ -4209,32 +4247,6 @@
       ctx.fillStyle = '#fff';
       ctx.font = '14px monospace';
       ctx.fillText(` ${player.boxings}`, coinX + 10, coinY + 5);
-
-      // Bottom-center: Luck cooldown bar
-      const barW = 200;
-      const barH = 6;
-      const barX = (canvas.width - barW) / 2;
-      const barY = canvas.height - 30;
-      // Label
-      ctx.fillStyle = '#9988bb';
-      ctx.font = '10px monospace';
-      ctx.fillText('LUCK', barX + barW / 2 - 14, barY - 4);
-      // Background
-      ctx.fillStyle = '#333';
-      ctx.fillRect(barX, barY, barW, barH);
-      // Fill
-      if (player.luckCooldown <= 0) {
-        ctx.fillStyle = '#6644aa';
-        ctx.fillRect(barX, barY, barW, barH);
-      } else {
-        const pct = 1 - (player.luckCooldown / player.luckMaxCooldown);
-        ctx.fillStyle = '#6644aa';
-        ctx.fillRect(barX, barY, barW * pct, barH);
-      }
-      // Border
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(barX, barY, barW, barH);
     }
 
     // --- Typewriter Helper ---
@@ -4243,6 +4255,11 @@
       while (charTimer >= speed && charIndex < text.length) {
         charTimer -= speed;
         charIndex++;
+        // Pause after ". " mid-sentence (period followed by space, not at end)
+        if (charIndex < text.length && text[charIndex - 1] === ' ' && charIndex >= 2 && text[charIndex - 2] === '.') {
+          charTimer -= 0.6; // extra 0.6s pause
+          break;
+        }
       }
       return { charIndex, charTimer };
     }
@@ -4342,6 +4359,9 @@
     }
 
     // --- Opening Cutscene ---
+    let curOpeningLines = openingScreens[0].lines;
+    let curOpeningPauses = openingScreens[0].pauses;
+
     function updateOpening(dt) {
       openingTimer += dt;
 
@@ -4350,9 +4370,43 @@
         openingFadeIn = Math.min(1, openingFadeIn + dt);
       }
 
-      // Fading out after key press
+      // Fading between screens or fading out at end
+      if (openingScreenFade > 0) {
+        openingScreenFade += dt * 1.5;
+        // Fade to black (0-1), hold briefly, then fade in next screen (1-2)
+        if (openingScreenFade >= 1 && openingScreenFade - dt * 1.5 < 1) {
+          // Just hit full black - switch to next screen
+          if (openingScreen < openingScreens.length - 1) {
+            openingScreen++;
+            curOpeningLines = openingScreens[openingScreen].lines;
+            curOpeningPauses = openingScreens[openingScreen].pauses;
+            openingLineIndex = 0;
+            openingCharIndex = 0;
+            openingCharTimer = 0;
+            openingPauseTimer = 0;
+            openingDisplayedLines = [];
+            openingDone = false;
+          }
+        }
+        if (openingScreenFade >= 2) {
+          // If we were on last screen, go to controls
+          if (openingScreen >= openingScreens.length - 1 && openingDone) {
+            gameState = 'controls';
+            controlsTimer = 0;
+            controlsAnyKeyReady = false;
+            anyKeyFlag = false;
+            openingScreenFade = 0;
+            return;
+          }
+          openingScreenFade = 0;
+          openingFadeIn = 0; // re-fade in the new screen text
+        }
+        return;
+      }
+
+      // Fading out after key press on final screen
       if (openingFadingOut) {
-        openingFadeOut += dt * 2; // fade to black in 0.5s
+        openingFadeOut += dt * 2;
         if (openingFadeOut >= 1.5) {
           gameState = 'controls';
           controlsTimer = 0;
@@ -4363,9 +4417,20 @@
         return;
       }
 
-      // Any key to begin
+      // Screen done
       if (openingDone) {
         openingBlinkTimer += dt;
+
+        // If not on last screen, auto-advance after a short pause
+        if (openingScreen < openingScreens.length - 1) {
+          if (openingTimer > 1.2 || anyKeyFlag) {
+            openingScreenFade = 0.01;
+            anyKeyFlag = false;
+          }
+          return;
+        }
+
+        // Last screen - wait for key press
         if (anyKeyFlag && openingAnyKeyReady) {
           openingFadingOut = true;
           openingFadeOut = 0;
@@ -4373,7 +4438,7 @@
         }
         if (!openingAnyKeyReady && openingTimer > 1) {
           openingAnyKeyReady = true;
-          anyKeyFlag = false; // reset so they need a fresh press
+          anyKeyFlag = false;
         }
         return;
       }
@@ -4385,7 +4450,7 @@
           openingLineIndex++;
           openingCharIndex = 0;
           openingCharTimer = 0;
-          if (openingLineIndex >= openingLines.length) {
+          if (openingLineIndex >= curOpeningLines.length) {
             openingDone = true;
             openingTimer = 0;
           }
@@ -4394,57 +4459,66 @@
       }
 
       // Typewriter current line
-      if (openingLineIndex < openingLines.length) {
-        const line = openingLines[openingLineIndex];
+      if (openingLineIndex < curOpeningLines.length) {
+        const line = curOpeningLines[openingLineIndex];
         const tw = typewriterUpdate(line, openingCharIndex, openingCharTimer, dt, 0.04);
         openingCharIndex = tw.charIndex;
         openingCharTimer = tw.charTimer;
 
-        // Build displayed lines
         openingDisplayedLines[openingLineIndex] = line.substring(0, openingCharIndex);
 
-        // Line done? start pause
         if (openingCharIndex >= line.length) {
-          openingPauseTimer = openingPauses[openingLineIndex] || 0.5;
+          openingPauseTimer = curOpeningPauses[openingLineIndex] || 0.5;
         }
       }
     }
 
     function renderOpening() {
-      // Black background
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const W = canvas.width;
+      const H = canvas.height;
 
-      // Draw text
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, W, H);
+
+      // Calculate fade alpha for screen transitions
+      let textAlpha = openingFadeIn;
+      if (openingScreenFade > 0) {
+        if (openingScreenFade < 1) {
+          textAlpha *= 1 - openingScreenFade; // fade out
+        } else {
+          textAlpha *= openingScreenFade - 1; // fade in
+        }
+      }
+
       ctx.save();
-      ctx.globalAlpha = openingFadeIn;
+      ctx.globalAlpha = textAlpha;
       ctx.fillStyle = '#e8e0d0';
       ctx.font = '16px monospace';
       ctx.textAlign = 'center';
 
       const lineHeight = 28;
-      const startY = canvas.height / 2 - (openingLines.length * lineHeight) / 2;
+      const startY = H / 2 - (curOpeningLines.length * lineHeight) / 2;
 
-      for (let i = 0; i <= openingLineIndex && i < openingLines.length; i++) {
+      for (let i = 0; i <= openingLineIndex && i < curOpeningLines.length; i++) {
         const text = openingDisplayedLines[i] || '';
         if (text) {
           ctx.fillText(text, canvas.width / 2, startY + i * lineHeight);
         }
       }
 
-      // "Press any key" blinking
-      if (openingDone && openingAnyKeyReady) {
+      // "Press any key" blinking - only on last screen
+      if (openingDone && openingAnyKeyReady && openingScreen >= openingScreens.length - 1) {
         const blink = Math.sin(openingBlinkTimer * 3) > 0;
         if (blink) {
-          ctx.globalAlpha = 0.7;
+          ctx.globalAlpha = 0.7 * textAlpha;
           ctx.font = '14px monospace';
-          ctx.fillText('Press any key to begin', canvas.width / 2, startY + openingLines.length * lineHeight + 40);
+          ctx.fillText('Press any key to begin', canvas.width / 2, startY + curOpeningLines.length * lineHeight + 40);
         }
       }
 
       ctx.restore();
 
-      // Fade out overlay
+      // Fade out overlay for final exit
       if (openingFadingOut) {
         const alpha = Math.min(openingFadeOut, 1);
         ctx.save();
@@ -4538,6 +4612,9 @@
 
     // --- In-game Hint System ---
     let gameplayTimer = 0;
+    let vinNameTimer = 0;
+    const vinNameDuration = 3.0; // show for 3 seconds then fade
+
     let hintAttackShown = false;
     let hintAttackFade = 1;
     let hintJumpShown = false;
@@ -4563,6 +4640,25 @@
     function renderInGameHints() {
       const playerCol = Math.floor(player.x / TILE);
       const dt = 0.016; // approximate
+
+      // --- "Vin" name label above player at game start ---
+      vinNameTimer += dt;
+      if (vinNameTimer < vinNameDuration + 1) {
+        let nameAlpha = 1;
+        if (vinNameTimer < 0.5) nameAlpha = vinNameTimer / 0.5; // fade in
+        else if (vinNameTimer > vinNameDuration) nameAlpha = Math.max(0, 1 - (vinNameTimer - vinNameDuration)); // fade out
+        if (nameAlpha > 0) {
+          const px = player.x + player.width / 2 - camera.x;
+          const py = player.y - camera.y - 20;
+          ctx.save();
+          ctx.globalAlpha = nameAlpha * 0.85;
+          ctx.fillStyle = '#e8d0b0';
+          ctx.font = '12px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('VIN', px, py);
+          ctx.restore();
+        }
+      }
 
       // --- Lore snippets ---
       for (const lore of loreSnippets) {
@@ -4690,16 +4786,7 @@
           ctx.restore();
         }
 
-        // Luck hint at bottom
-        if (!hasUsedLuck) {
-          ctx.save();
-          ctx.globalAlpha = 0.5;
-          ctx.fillStyle = '#e8d0b0';
-          ctx.font = '11px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('Z = Luck (Soothe enemies)', canvas.width / 2, canvas.height - 50);
-          ctx.restore();
-        }
+        // (Luck hint removed - player discovers it naturally)
       }
 
       // --- Section name + progress bar ---
@@ -4731,11 +4818,87 @@
       ctx.restore();
     }
 
+    // --- Section Transition Cutscene ---
+    let currentTransitionKey = '';
+    let currentTransitionTexts = [];
+
+    function startTransition(key) {
+      gameState = 'transition';
+      currentTransitionKey = key;
+      currentTransitionTexts = transitionTexts[key];
+      transitionPhase = 0;
+      transitionTimer = 0;
+      transitionTextIndex = 0;
+      transitionCharIndex = 0;
+      transitionCharTimer = 0;
+      transitionDisplayedText = '';
+      transitionFadeAlpha = 0;
+    }
+
+    function updateTransition(dt) {
+      transitionTimer += dt;
+
+      switch (transitionPhase) {
+        case 0: // Fade to black
+          transitionFadeAlpha = Math.min(1, transitionFadeAlpha + dt * 1.5);
+          if (transitionFadeAlpha >= 1) {
+            transitionPhase = 1;
+            transitionTimer = 0;
+            transitionCharIndex = 0;
+            transitionCharTimer = 0;
+            transitionDisplayedText = '';
+          }
+          break;
+
+        case 1: // Brief hold on black, then fade back in
+          if (transitionTimer > 0.5) {
+            transitionPhase = 2;
+            transitionTimer = 0;
+          }
+          break;
+
+        case 2: // Fade back in
+          transitionFadeAlpha = Math.max(0, transitionFadeAlpha - dt * 1.5);
+          if (transitionFadeAlpha <= 0) {
+            gameState = 'playing';
+          }
+          break;
+      }
+    }
+
+    function renderTransition() {
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Black overlay
+      ctx.save();
+      ctx.globalAlpha = transitionFadeAlpha;
+      ctx.fillStyle = '#050308';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.restore();
+    }
+
+    function checkSectionTransitions() {
+      if (gameState !== 'playing') return;
+      const playerCol = Math.floor(player.x / TILE);
+
+      if (!transitionTriggered.slumsToBorder && playerCol >= 69) {
+        transitionTriggered.slumsToBorder = true;
+        startTransition('slumsToBorder');
+      }
+
+      if (!transitionTriggered.borderToDeadEnd && playerCol >= 139) {
+        transitionTriggered.borderToDeadEnd = true;
+        startTransition('borderToDeadEnd');
+      }
+    }
+
     // --- Ending Cutscene ---
     const endingTexts = [
-      "There was nowhere left to run.",
       "She didn't understand what she'd done. Only that it worked.",
-      "Someone was watching."
+      "The mists curled around her like they knew.",
+      "And somewhere in the mists... someone was watching."
     ];
 
     function updateEnding(dt) {
@@ -4864,173 +5027,243 @@
     }
 
     function renderKelsierSilhouette() {
-      // Full-screen cinematic Kelsier reveal - NOT in game world
+      // Luthadel rooftop cityscape at night - a dark figure watches from above
       const W = canvas.width;
       const H = canvas.height;
       const reveal = endingKelsierReveal || 0;
 
       ctx.save();
 
-      // Dark cinematic background
-      ctx.fillStyle = '#050308';
+      // --- Night sky with red-tinged ash clouds ---
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+      skyGrad.addColorStop(0, '#0a0614');
+      skyGrad.addColorStop(0.3, '#14101e');
+      skyGrad.addColorStop(0.6, '#1e1420');
+      skyGrad.addColorStop(1, '#12101a');
+      ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, W, H);
 
-      // Ashy sky visible at top - dark but with subtle color
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.45);
-      skyGrad.addColorStop(0, '#2a1520');
-      skyGrad.addColorStop(0.4, '#1a0e18');
-      skyGrad.addColorStop(1, '#080510');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, W, H * 0.45);
+      // Dim red glow on horizon (ashmounts in distance)
+      const horizonGrad = ctx.createLinearGradient(0, H * 0.35, 0, H * 0.55);
+      horizonGrad.addColorStop(0, 'rgba(80, 20, 15, 0)');
+      horizonGrad.addColorStop(0.5, 'rgba(80, 25, 15, 0.15)');
+      horizonGrad.addColorStop(1, 'rgba(40, 10, 8, 0)');
+      ctx.fillStyle = horizonGrad;
+      ctx.fillRect(0, H * 0.35, W, H * 0.2);
 
-      // Rooftop ledge silhouette
-      const ledgeY = H * 0.62;
+      // Moon (large, pale, partially behind clouds)
+      const moonX = W * 0.72;
+      const moonY = H * 0.18;
+      const moonR = Math.min(W, H) * 0.06;
+      // Moon glow
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.5, moonX, moonY, moonR * 4);
+      moonGlow.addColorStop(0, 'rgba(180, 175, 200, 0.12)');
+      moonGlow.addColorStop(0.5, 'rgba(120, 115, 140, 0.04)');
+      moonGlow.addColorStop(1, 'rgba(60, 55, 80, 0)');
+      ctx.fillStyle = moonGlow;
+      ctx.fillRect(0, 0, W, H * 0.5);
+      // Moon disc
+      ctx.fillStyle = '#c8c0d8';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b0a8c0';
+      ctx.beginPath();
+      ctx.arc(moonX - moonR * 0.25, moonY + moonR * 0.1, moonR * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // --- Luthadel skyline - jagged rooftops, spires, Kredik Shaw ---
+      const roofY = H * 0.5;
+
+      // Far background buildings (darker, smaller)
+      ctx.fillStyle = '#0e0a16';
+      const farBuildings = [
+        [0.05, 0.38], [0.12, 0.35], [0.18, 0.4], [0.25, 0.32], [0.3, 0.42],
+        [0.38, 0.36], [0.45, 0.3], [0.52, 0.38], [0.6, 0.34], [0.68, 0.4],
+        [0.75, 0.37], [0.82, 0.33], [0.88, 0.39], [0.95, 0.36]
+      ];
+      for (const [bx, by] of farBuildings) {
+        const bw = W * 0.06 + Math.sin(bx * 17) * W * 0.02;
+        ctx.fillRect(bx * W - bw / 2, by * H, bw, H);
+      }
+
+      // Kredik Shaw spires (center-left, tall and menacing)
+      ctx.fillStyle = '#0c0812';
+      const ksX = W * 0.35;
+      // Central tower
+      ctx.beginPath();
+      ctx.moveTo(ksX - W * 0.015, H * 0.45);
+      ctx.lineTo(ksX - W * 0.004, H * 0.15);
+      ctx.lineTo(ksX + W * 0.004, H * 0.15);
+      ctx.lineTo(ksX + W * 0.015, H * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      // Side spires
+      for (const offset of [-0.04, -0.025, 0.025, 0.04]) {
+        const spireTop = H * (0.22 + Math.abs(offset) * 2);
+        ctx.beginPath();
+        ctx.moveTo(ksX + offset * W - W * 0.003, H * 0.45);
+        ctx.lineTo(ksX + offset * W, spireTop);
+        ctx.lineTo(ksX + offset * W + W * 0.003, H * 0.45);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Mid buildings
+      ctx.fillStyle = '#100c18';
+      const midBuildings = [
+        [0.0, 0.44, 0.08], [0.1, 0.42, 0.06], [0.55, 0.43, 0.07],
+        [0.65, 0.41, 0.05], [0.72, 0.44, 0.06], [0.8, 0.42, 0.08],
+        [0.9, 0.43, 0.07], [0.98, 0.45, 0.05]
+      ];
+      for (const [bx, by, bw] of midBuildings) {
+        ctx.fillRect(bx * W, by * H, bw * W, H);
+        // Occasional dim window
+        if (Math.sin(bx * 37) > 0.2) {
+          ctx.fillStyle = 'rgba(180, 140, 60, 0.08)';
+          ctx.fillRect(bx * W + bw * W * 0.3, by * H + H * 0.02, W * 0.005, H * 0.008);
+          ctx.fillStyle = '#100c18';
+        }
+      }
+
+      // --- Foreground rooftop (where the figure stands) ---
+      // This is the main rooftop - right side of screen, closer to viewer
+      const roofTop = H * 0.55;
+      const roofLeft = W * 0.55;
+
+      // Rooftop surface
+      ctx.fillStyle = '#16121e';
+      ctx.beginPath();
+      ctx.moveTo(roofLeft, roofTop);
+      ctx.lineTo(roofLeft + W * 0.05, roofTop - H * 0.02);
+      ctx.lineTo(W, roofTop - H * 0.01);
+      ctx.lineTo(W, H);
+      ctx.lineTo(roofLeft, H);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rooftop edge detail
+      ctx.fillStyle = '#1e1828';
+      ctx.fillRect(roofLeft, roofTop - 1, W - roofLeft, 3);
+
+      // Building wall below rooftop
+      ctx.fillStyle = '#12101a';
+      ctx.fillRect(roofLeft + W * 0.02, roofTop, W * 0.5, H - roofTop);
+
+      // --- THE FIGURE (Kelsier) - silhouette on the rooftop edge ---
+      const figAlpha = reveal;
+      ctx.globalAlpha = figAlpha;
+
+      const fx = W * 0.72; // positioned on the right side rooftop
+      const fy = roofTop; // standing on the roof edge
+      const s = Math.min(W, H) / 380; // smaller, more distant = cooler
+
+      // Mistcloak tendrils flowing in the wind (behind, to the left)
       ctx.fillStyle = '#0a0812';
-      ctx.fillRect(0, ledgeY, W, H - ledgeY);
-      // Ledge edge detail
-      ctx.fillStyle = '#0e0b16';
-      ctx.fillRect(0, ledgeY, W, 4);
+      for (let i = 0; i < 7; i++) {
+        const tendrilLen = (30 + i * 10) * s;
+        const sway = Math.sin(bgTime * 0.5 + i * 0.9) * 6 * s;
+        const sway2 = Math.sin(bgTime * 0.35 + i * 1.3) * 4 * s;
+        const startX = fx - 6 * s;
+        const startY = fy - 40 * s;
+        const endX = startX - tendrilLen * 0.7 + sway;
+        const endY = startY + tendrilLen * 0.5 + sway2;
 
-      // Kelsier silhouette - centered, large, dramatic
-      const kx = W / 2;
-      const scale = Math.min(W, H) / 320; // scale relative to screen size
-      const ky = ledgeY; // standing ON the ledge
-      const kAlpha = reveal; // fade in
-
-      ctx.globalAlpha = kAlpha;
-
-      // --- MISTCLOAK flowing tendrils (behind body) ---
-      ctx.fillStyle = '#0e0a14';
-      // Left cloak tendrils
-      for (let i = 0; i < 6; i++) {
-        const tendrilX = kx - 18 * scale - i * 6 * scale;
-        const tendrilLen = (40 + i * 12) * scale;
-        const sway = Math.sin(bgTime * 0.6 + i * 0.8) * 8 * scale;
-        const sway2 = Math.sin(bgTime * 0.4 + i * 1.2) * 4 * scale;
         ctx.beginPath();
-        ctx.moveTo(kx - 14 * scale, ky - 50 * scale);
-        ctx.quadraticCurveTo(tendrilX + sway2, ky - 20 * scale, tendrilX + sway, ky + tendrilLen - 50 * scale);
-        ctx.lineTo(tendrilX + sway + 3 * scale, ky + tendrilLen - 50 * scale);
-        ctx.quadraticCurveTo(tendrilX + 4 * scale + sway2, ky - 18 * scale, kx - 10 * scale, ky - 48 * scale);
-        ctx.closePath();
-        ctx.fill();
-      }
-      // Right cloak tendrils
-      for (let i = 0; i < 6; i++) {
-        const tendrilX = kx + 18 * scale + i * 6 * scale;
-        const tendrilLen = (40 + i * 12) * scale;
-        const sway = Math.sin(bgTime * 0.6 + i * 0.8 + 3) * 8 * scale;
-        const sway2 = Math.sin(bgTime * 0.4 + i * 1.2 + 3) * 4 * scale;
-        ctx.beginPath();
-        ctx.moveTo(kx + 14 * scale, ky - 50 * scale);
-        ctx.quadraticCurveTo(tendrilX + sway2, ky - 20 * scale, tendrilX + sway, ky + tendrilLen - 50 * scale);
-        ctx.lineTo(tendrilX + sway - 3 * scale, ky + tendrilLen - 50 * scale);
-        ctx.quadraticCurveTo(tendrilX - 4 * scale + sway2, ky - 18 * scale, kx + 10 * scale, ky - 48 * scale);
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(startX - tendrilLen * 0.3 + sway2, startY + tendrilLen * 0.2, endX, endY);
+        ctx.lineTo(endX + 2 * s, endY + 1 * s);
+        ctx.quadraticCurveTo(startX - tendrilLen * 0.2 + sway2, startY + tendrilLen * 0.15, startX + 2 * s, startY + 2 * s);
         ctx.closePath();
         ctx.fill();
       }
 
-      // --- Body silhouette ---
-      ctx.fillStyle = '#0a0810';
+      // Body silhouette - simple, clean, confident pose
+      ctx.fillStyle = '#0a0812';
 
-      // Legs - confident wide stance
-      ctx.fillRect(kx - 10 * scale, ky - 22 * scale, 8 * scale, 22 * scale);
-      ctx.fillRect(kx + 2 * scale, ky - 22 * scale, 8 * scale, 22 * scale);
+      // Legs - one foot on ledge edge, relaxed confident stance
+      ctx.fillRect(fx - 5 * s, fy - 20 * s, 5 * s, 20 * s);
+      ctx.fillRect(fx + 2 * s, fy - 18 * s, 5 * s, 18 * s);
+      // Front foot slightly forward on the edge
+      ctx.fillRect(fx + 2 * s, fy - 2 * s, 7 * s, 2 * s);
 
       // Torso
-      ctx.fillRect(kx - 12 * scale, ky - 52 * scale, 24 * scale, 30 * scale);
+      ctx.fillRect(fx - 7 * s, fy - 42 * s, 16 * s, 22 * s);
 
-      // Shoulders (broad, confident)
-      ctx.fillRect(kx - 18 * scale, ky - 52 * scale, 36 * scale, 8 * scale);
+      // Shoulders
+      ctx.fillRect(fx - 10 * s, fy - 44 * s, 22 * s, 5 * s);
 
-      // Arms relaxed at sides, slightly away from body
-      // Left arm
+      // Arms - one arm relaxed, one slightly out
+      // Left arm (relaxed at side)
       ctx.save();
-      ctx.translate(kx - 18 * scale, ky - 48 * scale);
-      ctx.rotate(-0.12);
-      ctx.fillRect(0, 0, 7 * scale, 26 * scale);
+      ctx.translate(fx - 10 * s, fy - 40 * s);
+      ctx.rotate(-0.1);
+      ctx.fillRect(0, 0, 5 * s, 22 * s);
       ctx.restore();
-      // Right arm
+      // Right arm (resting on knee/hip, casual)
       ctx.save();
-      ctx.translate(kx + 11 * scale, ky - 48 * scale);
-      ctx.rotate(0.12);
-      ctx.fillRect(0, 0, 7 * scale, 26 * scale);
+      ctx.translate(fx + 8 * s, fy - 40 * s);
+      ctx.rotate(0.2);
+      ctx.fillRect(0, 0, 5 * s, 18 * s);
       ctx.restore();
 
       // Neck
-      ctx.fillRect(kx - 4 * scale, ky - 58 * scale, 8 * scale, 8 * scale);
+      ctx.fillRect(fx - 2 * s, fy - 48 * s, 6 * s, 6 * s);
 
       // Head
       ctx.beginPath();
-      ctx.arc(kx, ky - 66 * scale, 10 * scale, 0, Math.PI * 2);
+      ctx.arc(fx + 1 * s, fy - 54 * s, 7 * s, 0, Math.PI * 2);
       ctx.fill();
 
-      // Hair - messy, some sticking up (Kelsier's signature look)
+      // Hair - messy, windswept (tufts blowing to the left with the cloak)
       ctx.beginPath();
-      ctx.moveTo(kx - 9 * scale, ky - 74 * scale);
-      ctx.lineTo(kx - 5 * scale, ky - 86 * scale);
-      ctx.lineTo(kx - 2 * scale, ky - 76 * scale);
-      ctx.lineTo(kx + 1 * scale, ky - 90 * scale);
-      ctx.lineTo(kx + 4 * scale, ky - 78 * scale);
-      ctx.lineTo(kx + 7 * scale, ky - 84 * scale);
-      ctx.lineTo(kx + 10 * scale, ky - 74 * scale);
-      ctx.closePath();
-      ctx.fill();
-      // Side hair
-      ctx.beginPath();
-      ctx.moveTo(kx - 11 * scale, ky - 68 * scale);
-      ctx.lineTo(kx - 14 * scale, ky - 72 * scale);
-      ctx.lineTo(kx - 10 * scale, ky - 62 * scale);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(kx + 11 * scale, ky - 68 * scale);
-      ctx.lineTo(kx + 14 * scale, ky - 72 * scale);
-      ctx.lineTo(kx + 10 * scale, ky - 62 * scale);
+      ctx.moveTo(fx - 6 * s, fy - 59 * s);
+      ctx.lineTo(fx - 9 * s, fy - 64 * s);
+      ctx.lineTo(fx - 4 * s, fy - 62 * s);
+      ctx.lineTo(fx - 2 * s, fy - 68 * s);
+      ctx.lineTo(fx + 1 * s, fy - 63 * s);
+      ctx.lineTo(fx + 4 * s, fy - 67 * s);
+      ctx.lineTo(fx + 6 * s, fy - 61 * s);
+      ctx.lineTo(fx + 8 * s, fy - 64 * s);
+      ctx.lineTo(fx + 8 * s, fy - 58 * s);
       ctx.closePath();
       ctx.fill();
 
-      // --- Smile glint --- a small bright highlight on his face
-      ctx.fillStyle = '#e8dcc8';
-      const glintAlpha = (0.4 + Math.sin(bgTime * 1.5) * 0.3) * reveal;
-      ctx.globalAlpha = glintAlpha;
-      ctx.fillRect(kx - 3 * scale, ky - 61 * scale, 6 * scale, 1.5 * scale);
-      // Eye glints
-      ctx.globalAlpha = glintAlpha * 0.6;
-      ctx.fillRect(kx - 5 * scale, ky - 67 * scale, 2 * scale, 1 * scale);
-      ctx.fillRect(kx + 3 * scale, ky - 67 * scale, 2 * scale, 1 * scale);
-
-      ctx.globalAlpha = kAlpha;
-
-      // --- Mist swirling around him ---
-      for (let m = 0; m < 12; m++) {
-        const angle = bgTime * 0.3 + m * (Math.PI * 2 / 12);
-        const radius = (30 + m * 8 + Math.sin(bgTime * 0.5 + m) * 10) * scale;
-        const mx = kx + Math.cos(angle) * radius;
-        const my = ky - 40 * scale + Math.sin(angle) * radius * 0.3;
-        const mistAlpha = 0.03 + Math.sin(bgTime * 0.7 + m * 2) * 0.015;
-        ctx.strokeStyle = `rgba(140, 135, 160, ${mistAlpha})`;
-        ctx.lineWidth = 1.5;
+      // --- Mist drifting across the scene ---
+      ctx.globalAlpha = reveal;
+      for (let m = 0; m < 15; m++) {
+        const my = H * 0.3 + m * H * 0.045;
+        const mx = (bgTime * 15 + m * 120) % (W + 200) - 100;
+        const mLen = 40 + Math.sin(m * 3.7) * 25;
+        const mAlpha = 0.03 + Math.sin(bgTime * 0.4 + m) * 0.015;
+        ctx.strokeStyle = `rgba(160, 155, 180, ${mAlpha})`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-          const px = mx + i * 4 * scale;
-          const py = my + Math.sin(bgTime * 0.8 + m + i * 0.5) * 3 * scale;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+        ctx.moveTo(mx, my);
+        ctx.quadraticCurveTo(mx + mLen * 0.5, my + Math.sin(bgTime * 0.6 + m) * 3, mx + mLen, my + Math.sin(bgTime * 0.3 + m * 2) * 2);
         ctx.stroke();
       }
 
-      // Ground mist around his feet
-      for (let m = 0; m < 8; m++) {
-        const mx = kx + (m - 4) * 20 * scale + Math.sin(bgTime * 0.3 + m) * 10 * scale;
-        const my = ky - 2 * scale;
-        const mGrad = ctx.createRadialGradient(mx, my, 2, mx, my, 20 * scale);
-        mGrad.addColorStop(0, `rgba(100, 95, 120, ${0.06 * reveal})`);
+      // Mist pooling around the rooftops
+      for (let m = 0; m < 10; m++) {
+        const mx = W * 0.1 + m * W * 0.09;
+        const my = roofTop + Math.sin(m * 2.1) * H * 0.03;
+        const mGrad = ctx.createRadialGradient(mx, my, 2, mx, my, W * 0.06);
+        mGrad.addColorStop(0, `rgba(120, 115, 145, ${0.04 * reveal})`);
         mGrad.addColorStop(1, 'rgba(80, 75, 100, 0)');
         ctx.fillStyle = mGrad;
         ctx.beginPath();
-        ctx.arc(mx, my, 20 * scale, 0, Math.PI * 2);
+        ctx.arc(mx, my, W * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Falling ash particles
+      ctx.fillStyle = 'rgba(100, 90, 80, 0.15)';
+      for (let a = 0; a < 20; a++) {
+        const ax = (a * W * 0.07 + bgTime * 8 * (0.5 + Math.sin(a) * 0.3)) % W;
+        const ay = (a * H * 0.06 + bgTime * 12 * (0.3 + Math.cos(a * 1.3) * 0.2)) % H;
+        ctx.beginPath();
+        ctx.arc(ax, ay, 1, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -5071,19 +5304,14 @@
         ctx.restore();
       }
 
-      // Kelsier cinematic reveal during phase 4+
-      if (endingPhase >= 4 && endingPhase < 5) {
-        renderKelsierSilhouette();
-      }
-
-      // Text overlay
+      // Text overlay — centered narration style
       if (endingDisplayedText && endingDisplayedText.length > 0) {
         ctx.save();
         ctx.fillStyle = '#e8e0d0';
         ctx.font = '16px monospace';
         ctx.textAlign = 'center';
         ctx.globalAlpha = 0.9;
-        ctx.fillText(endingDisplayedText, canvas.width / 2, canvas.height - 60);
+        ctx.fillText(endingDisplayedText, canvas.width / 2, canvas.height / 2);
         ctx.restore();
       }
 
@@ -5176,6 +5404,10 @@
       openingFadeOut = 0;
       openingFadingOut = false;
       openingAnyKeyReady = false;
+      openingScreen = 0;
+      openingScreenFade = 0;
+      curOpeningLines = openingScreens[0].lines;
+      curOpeningPauses = openingScreens[0].pauses;
       // Reset controls state
       controlsTimer = 0;
       controlsAnyKeyReady = false;
@@ -5183,6 +5415,7 @@
       controlsFadeOut = 0;
       // Reset hints
       gameplayTimer = 0;
+      vinNameTimer = 0;
       hintAttackShown = false;
       hintJumpShown = false;
       hintLuckShown = false;
@@ -5194,6 +5427,12 @@
       firstGuardLabelShown = false;
       firstGuardLabelTimer = 0;
       for (const lore of loreSnippets) { lore.shown = false; lore.alpha = 0; lore.timer = 0; }
+      // Reset transition state
+      transitionTriggered = { slumsToBorder: false, borderToDeadEnd: false };
+      transitionPhase = 0;
+      transitionTimer = 0;
+      transitionTextIndex = 0;
+      transitionDisplayedText = '';
       // Reset ending state
       endingPhase = 0;
       endingTimer = 0;
@@ -5305,6 +5544,30 @@
         return;
       }
 
+      if (gameState === 'transition') {
+        bgTime += safeDt;
+        updateTransition(safeDt);
+        // Render world underneath the transition overlay
+        ctx.save();
+        ctx.translate(screenShake.x, screenShake.y);
+        renderBackground(safeDt);
+        renderTiles();
+        renderEnvironment();
+        renderAshClumps();
+        renderPickups();
+        renderEnemies();
+        renderSoothedIndicators();
+        renderEffects();
+        renderGameParticles();
+        renderPlayer();
+        updateParticles(safeDt);
+        renderParticles();
+        ctx.restore();
+        renderTransition();
+        requestAnimationFrame(gameLoop);
+        return;
+      }
+
       // Track previous grounded state for landing dust
       const wasOnGround = prevOnGround;
 
@@ -5367,6 +5630,40 @@
       renderEffects();
       renderGameParticles();
       renderPlayer();
+
+      // Mist curling around Vin during ending phase 2+
+      if (gameState === 'ending' && endingPhase >= 2 && endingPhase < 5) {
+        const px = player.x + player.width / 2 - camera.x;
+        const py = player.y + player.height / 2 - camera.y;
+        const mistIntensity = Math.min(1, (endingPhase === 2 ? endingTimer * 0.4 : 1));
+        // Swirling mist tendrils around Vin
+        for (let m = 0; m < 16; m++) {
+          const angle = bgTime * 0.4 + m * (Math.PI * 2 / 16);
+          const r = 25 + m * 4 + Math.sin(bgTime * 0.6 + m * 1.5) * 12;
+          const mx = px + Math.cos(angle) * r;
+          const my = py + Math.sin(angle) * r * 0.5;
+          const mAlpha = (0.06 + Math.sin(bgTime * 0.8 + m * 2) * 0.03) * mistIntensity;
+          ctx.strokeStyle = `rgba(180, 175, 200, ${mAlpha})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) {
+            const sx = mx + i * 5;
+            const sy = my + Math.sin(bgTime * 0.7 + m + i * 0.6) * 4;
+            if (i === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+        }
+        // Larger mist glow around her
+        const mistGlow = ctx.createRadialGradient(px, py, 10, px, py, 80);
+        mistGlow.addColorStop(0, `rgba(140, 135, 170, ${0.08 * mistIntensity})`);
+        mistGlow.addColorStop(0.5, `rgba(120, 115, 150, ${0.04 * mistIntensity})`);
+        mistGlow.addColorStop(1, 'rgba(100, 95, 130, 0)');
+        ctx.fillStyle = mistGlow;
+        ctx.beginPath();
+        ctx.arc(px, py, 80, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Ash particles
       updateParticles(safeDt);
